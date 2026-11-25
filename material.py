@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import re
 import subprocess
 
 import numpy as np
@@ -29,6 +30,21 @@ def decode(source, rate):
     return np.frombuffer(raw, dtype="<f4").reshape(-1, 2)
 
 
+def integrated_loudness(audio, rate):
+    """Measure the selected stereo PCM interval before applying fixed gain."""
+    report = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-nostats", "-f", "f32le", "-ac", "2",
+         "-ar", str(rate), "-i", "pipe:0", "-af", "ebur128=framelog=verbose",
+         "-f", "null", "-"],
+        input=memoryview(audio).cast("B"), capture_output=True,
+    )
+    match = re.search(rb"Integrated loudness:\s+I:\s+(-?\d+(?:\.\d+)?)\s+LUFS",
+                      report.stderr)
+    if report.returncode or not match:
+        raise RuntimeError("FFmpeg で原曲のラウドネスを測定できませんでした。")
+    return float(match[1])
+
+
 class Track:
     def __init__(self, config, rules):
         self.rate = config["sample_rate"]
@@ -50,8 +66,10 @@ class Track:
             source[self.end - fade:self.end] * (1 - blend[:, None])
             + source[self.start - fade:self.start] * blend[:, None]
         )
+        loudness = integrated_loudness(audio[self.start:self.end], self.rate)
+        target_gain = 10 ** ((config["target_lufs"] - loudness) / 20)
         peak = float(np.max(np.abs(audio)))
-        audio *= min(1.0, (0.97 - rules["hit_peak"]) / max(peak, 1e-6))
+        audio *= min(target_gain, (0.97 - rules["hit_peak"]) / max(peak, 1e-6))
         self.audio = audio
         self.hits = {
             name: self.make_hit(source, spec, rules["hit_peak"])

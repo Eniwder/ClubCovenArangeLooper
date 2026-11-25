@@ -1,6 +1,7 @@
 {
   "source": "ClubCoven.mp3",
   "sample_rate": 48000,
+  "target_lufs": -17,
   "bpm": 120,
   "beats_per_bar": 4,
   "first_arranged_bar": 16.375,

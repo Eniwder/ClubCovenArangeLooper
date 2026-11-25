@@ -61,8 +61,9 @@ class Engine:
             self.voices.append((track.instruments[instrument][midi], 0, gain))
         rhythm = config.get("rhythm")
         if rhythm:
-            if self.step in rhythm["bass_steps"]:
-                self.play_note("replacement_bass", track.pitches_at(self.source_pos)[0], .9)
+            if self.step in self.arrangement.bass_steps:
+                bass = rhythm.get("bass_instrument", "replacement_bass")
+                self.play_note(bass, track.pitches_at(self.source_pos)[0], .9)
             drum = rhythm["kit"].get(str(self.step))
             if drum:
                 hit, gain = drum

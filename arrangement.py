@@ -15,6 +15,7 @@ class Arrangement:
         self.style_age = 0
         self.style_random = random.Random(seed ^ 0x2764)
         self.tone_pattern = {}
+        self.bass_steps = ()
 
     def lead_events(self, contour, spec):
         """Keep lead notes in source order and vary their attack or voicing."""
@@ -63,7 +64,13 @@ class Arrangement:
                     self.age = 0
             self.age += 1
         self.bar += 1
-        pattern = self.rules["styles"][self.style]["pattern"]
+        style = self.rules["styles"][self.style]
+        pattern = style["pattern"]
+        rhythm = style.get("rhythm", {})
+        variants = rhythm.get("bass_variants")
+        self.bass_steps = (
+            variants[position % len(variants)] if variants else rhythm.get("bass_steps", ())
+        )
         self.tone_pattern = {
             step: (tone, gain * self.style_random.uniform(.88, 1.0))
             for step, tone, gain in pattern
