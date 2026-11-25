@@ -1,6 +1,7 @@
 import argparse
 import json
 from pathlib import Path
+from random import getrandbits
 import sys
 import wave
 
@@ -49,6 +50,7 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
     stopping = False
     current_gain = 0.0
     underrun = False
+    tray = None
 
     def update_volume(value):
         nonlocal volume
@@ -105,6 +107,7 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
         play_button.state(["disabled"])
         stop_button.state(["!disabled"])
         seed_entry.state(["disabled"])
+        random_seed_button.state(["disabled"])
         status.set("再生中")
 
     def stop():
@@ -120,6 +123,7 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
                 play_button.state(["!disabled"])
                 stop_button.state(["disabled"])
                 seed_entry.state(["!disabled"])
+                random_seed_button.state(["!disabled"])
                 status.set("停止中" if stopping else "音声出力が停止しました。")
             elif underrun and not stopping:
                 status.set("再生中（音声出力の遅延を検出）")
@@ -167,8 +171,15 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
     slider.set(70)
     slider.grid(row=1, column=1, sticky="ew", pady=(12, 0))
     ttk.Label(body, text="乱数シード").grid(row=2, column=0, sticky="w", pady=(8, 0))
-    seed_entry = ttk.Entry(body, textvariable=seed, width=16)
-    seed_entry.grid(row=2, column=1, sticky="ew", pady=(8, 0))
+    seed_controls = ttk.Frame(body)
+    seed_controls.grid(row=2, column=1, sticky="ew", pady=(8, 0))
+    seed_controls.columnconfigure(0, weight=1)
+    seed_entry = ttk.Entry(seed_controls, textvariable=seed, width=16)
+    seed_entry.grid(row=0, column=0, sticky="ew")
+    random_seed_button = ttk.Button(
+        seed_controls, text="ランダム", command=lambda: seed.set(str(getrandbits(32)))
+    )
+    random_seed_button.grid(row=0, column=1, padx=(8, 0))
     ttk.Label(body, textvariable=status, wraplength=270).grid(
         row=3, column=0, columnspan=2, sticky="w", pady=(12, 0)
     )
@@ -183,12 +194,23 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
     export_button.grid(row=7, columnspan=2, sticky="w", pady=(8, 0))
 
     def quit_app():
-        close_stream()
-        root.destroy()
+        try:
+            close_stream()
+        finally:
+            root.destroy()
+
+    if sys.platform == "win32":
+        from tray import WindowTray
+
+        tray = WindowTray(root, quit_app)
 
     root.protocol("WM_DELETE_WINDOW", quit_app)
     root.after(100, poll)
-    root.mainloop()
+    try:
+        root.mainloop()
+    finally:
+        if tray is not None:
+            tray.close()
 
 
 def main():
