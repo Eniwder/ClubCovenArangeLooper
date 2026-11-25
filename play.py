@@ -247,7 +247,12 @@ def main():
         else:
             run_gui(track, rules, args.seed, args.intensity / 100, controls)
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
-        print(error, file=sys.stderr)
+        if sys.stderr is None and not args.preview:
+            from tkinter import messagebox
+
+            messagebox.showerror("Club Coven", str(error))
+        else:
+            print(error, file=sys.stderr)
         return 1
     return 0
 

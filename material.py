@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
 
 import numpy as np
 from accompaniment import analyse_melody, analyse_pitches, make_instruments, make_kit
@@ -11,6 +12,7 @@ from backing import make_backing
 from cache import cache_key, read_cache, write_cache
 
 ROOT = Path(__file__).resolve().parent
+FFMPEG_CREATION_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def read_json(name):
@@ -22,7 +24,7 @@ def decode(source, rate):
         raw = subprocess.run(
             ["ffmpeg", "-nostdin", "-v", "error", "-i", str(source),
              "-f", "f32le", "-ac", "2", "-ar", str(rate), "-"],
-            capture_output=True, check=True,
+            capture_output=True, check=True, creationflags=FFMPEG_CREATION_FLAGS,
         ).stdout
     except FileNotFoundError as error:
         raise RuntimeError("FFmpeg が見つかりません。PATH を確認してください。") from error
@@ -38,6 +40,7 @@ def integrated_loudness(audio, rate):
          "-ar", str(rate), "-i", "pipe:0", "-af", "ebur128=framelog=verbose",
          "-f", "null", "-"],
         input=memoryview(audio).cast("B"), capture_output=True,
+        creationflags=FFMPEG_CREATION_FLAGS,
     )
     match = re.search(rb"Integrated loudness:\s+I:\s+(-?\d+(?:\.\d+)?)\s+LUFS",
                       report.stderr)
