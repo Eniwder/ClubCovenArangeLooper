@@ -1,0 +1,36 @@
+{
+  "source": "ClubCoven.mp3",
+  "sample_rate": 48000,
+  "bpm": 120,
+  "beats_per_bar": 4,
+  "first_arranged_bar": 16.375,
+  "loop_start": 30.75,
+  "loop_end": 98.75,
+  "crossfade_ms": 65,
+  "hits": {
+    "closed": {
+      "time": 12.481,
+      "length_ms": 46,
+      "low_hz": 4600,
+      "high_hz": 10500
+    },
+    "open": {
+      "time": 13.883,
+      "length_ms": 82,
+      "low_hz": 3300,
+      "high_hz": 9600
+    },
+    "fill": {
+      "time": 16.863,
+      "length_ms": 90,
+      "low_hz": 2400,
+      "high_hz": 8100
+    },
+    "kick": {
+      "time": 16.873,
+      "length_ms": 112,
+      "low_hz": 30,
+      "high_hz": 165
+    }
+  }
+}

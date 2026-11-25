@@ -1,0 +1,581 @@
+{
+  "phrase_bars": 4,
+  "velocity_jitter": 0.13,
+  "hit_peak": 0.15,
+  "states": {
+    "original": {
+      "min_phrases": 1,
+      "max_phrases": 2,
+      "steps": 0,
+      "velocity": 0,
+      "next": {
+        "quiet": 2,
+        "groove": 3
+      }
+    },
+    "quiet": {
+      "min_phrases": 1,
+      "max_phrases": 3,
+      "steps": 1,
+      "velocity": 0.35,
+      "next": {
+        "quiet": 2,
+        "groove": 4,
+        "original": 2
+      }
+    },
+    "groove": {
+      "min_phrases": 2,
+      "max_phrases": 4,
+      "steps": 3,
+      "velocity": 0.63,
+      "next": {
+        "groove": 3,
+        "lift": 3,
+        "quiet": 2,
+        "original": 1
+      }
+    },
+    "lift": {
+      "min_phrases": 1,
+      "max_phrases": 2,
+      "steps": 5,
+      "velocity": 0.86,
+      "next": {
+        "lift": 2,
+        "groove": 2,
+        "quiet": 3,
+        "original": 2
+      }
+    }
+  },
+  "offbeats": [
+    2,
+    6,
+    10,
+    14
+  ],
+  "syncopations": [
+    3,
+    7,
+    11,
+    15
+  ],
+  "fill_steps": [
+    11,
+    14,
+    15
+  ],
+  "styles": {
+    "original": {
+      "phrases": 1,
+      "original_gain": 1.0,
+      "drum_gain": 1.0,
+      "pattern": [],
+      "next": {
+        "keys": 3,
+        "pluck": 3,
+        "pulse": 3,
+        "air": 2,
+        "refrain": 6,
+        "half_time": 4
+      }
+    },
+    "keys": {
+      "phrases": 2,
+      "original_gain": 0.53,
+      "drum_gain": 0.15,
+      "register": 60,
+      "length": 0.72,
+      "attack": 0.008,
+      "decay": 3.1,
+      "brightness_decay": 0.85,
+      "stretch": 0.0007,
+      "level": 0.27,
+      "pan": [
+        0.95,
+        0.86
+      ],
+      "partials": [
+        1,
+        0.5,
+        0.29,
+        0.17,
+        0.11,
+        0.08
+      ],
+      "pattern": [
+        [
+          0,
+          0,
+          0.93
+        ],
+        [
+          2,
+          1,
+          0.53
+        ],
+        [
+          6,
+          1,
+          0.75
+        ],
+        [
+          8,
+          0,
+          0.76
+        ],
+        [
+          12,
+          1,
+          0.84
+        ]
+      ],
+      "next": {
+        "original": 3,
+        "pluck": 2,
+        "pulse": 2,
+        "air": 2,
+        "refrain": 6,
+        "half_time": 4
+      }
+    },
+    "pluck": {
+      "phrases": 2,
+      "original_gain": 0.61,
+      "drum_gain": 0.22,
+      "register": 55,
+      "length": 0.42,
+      "attack": 0.005,
+      "decay": 4.3,
+      "brightness_decay": 2.4,
+      "stretch": 0.0,
+      "level": 0.26,
+      "pan": [
+        0.8,
+        1.0
+      ],
+      "partials": [
+        1,
+        0.8,
+        0.22,
+        0.48,
+        0.25,
+        0.11,
+        0.09
+      ],
+      "pattern": [
+        [
+          2,
+          1,
+          0.8
+        ],
+        [
+          4,
+          0,
+          0.72
+        ],
+        [
+          7,
+          1,
+          0.51
+        ],
+        [
+          10,
+          1,
+          0.83
+        ],
+        [
+          14,
+          0,
+          0.6
+        ]
+      ],
+      "next": {
+        "original": 3,
+        "keys": 2,
+        "pulse": 3,
+        "air": 2,
+        "refrain": 6,
+        "half_time": 4
+      }
+    },
+    "pulse": {
+      "phrases": 2,
+      "original_gain": 0.76,
+      "drum_gain": 0.82,
+      "register": 43,
+      "length": 0.26,
+      "attack": 0.014,
+      "decay": 5.4,
+      "brightness_decay": 0.4,
+      "stretch": 0.0,
+      "level": 0.25,
+      "pan": [
+        1.0,
+        1.0
+      ],
+      "partials": [
+        1,
+        0.3,
+        0.3,
+        0.02,
+        0.19,
+        0.06,
+        0.07
+      ],
+      "pattern": [
+        [
+          0,
+          0,
+          0.9
+        ],
+        [
+          3,
+          0,
+          0.52
+        ],
+        [
+          6,
+          0,
+          0.77
+        ],
+        [
+          8,
+          0,
+          0.8
+        ],
+        [
+          11,
+          0,
+          0.55
+        ],
+        [
+          14,
+          0,
+          0.7
+        ]
+      ],
+      "next": {
+        "original": 3,
+        "keys": 2,
+        "pluck": 3,
+        "air": 3,
+        "refrain": 6,
+        "half_time": 4
+      }
+    },
+    "air": {
+      "phrases": 1,
+      "original_gain": 0.43,
+      "drum_gain": 0.0,
+      "register": 67,
+      "length": 0.92,
+      "attack": 0.22,
+      "decay": 1.1,
+      "brightness_decay": 0.2,
+      "stretch": 0.001,
+      "level": 0.22,
+      "pan": [
+        1.0,
+        0.92
+      ],
+      "partials": [
+        1,
+        0.32,
+        0.13,
+        0.07,
+        0.025
+      ],
+      "pattern": [
+        [
+          0,
+          0,
+          0.72
+        ],
+        [
+          8,
+          1,
+          0.79
+        ]
+      ],
+      "next": {
+        "original": 4,
+        "keys": 3,
+        "pluck": 2,
+        "pulse": 2,
+        "refrain": 6,
+        "half_time": 4
+      }
+    },
+    "refrain": {
+      "phrases": 2,
+      "original_gain": 0,
+      "drum_gain": 0,
+      "pattern": [],
+      "register": 60,
+      "register_span": 24,
+      "length": 0.44,
+      "attack": 0.013,
+      "decay": 2.8,
+      "brightness_decay": 0.5,
+      "stretch": 0.0008,
+      "level": 0.31,
+      "pan": [
+        1,
+        0.92
+      ],
+      "partials": [
+        1,
+        0.55,
+        0.36,
+        0.12,
+        0.08,
+        0.04
+      ],
+      "melody": {
+        "center": 72,
+        "call": [
+          [
+            0,
+            0,
+            0,
+            0.84
+          ],
+          [
+            3,
+            2,
+            2,
+            0.69
+          ],
+          [
+            5,
+            1,
+            2,
+            0.79
+          ],
+          [
+            8,
+            3,
+            1,
+            0.94
+          ],
+          [
+            11,
+            0,
+            2,
+            0.62
+          ],
+          [
+            14,
+            2,
+            1,
+            0.76
+          ]
+        ],
+        "answer": [
+          [
+            0,
+            1,
+            1,
+            0.9
+          ],
+          [
+            4,
+            3,
+            2,
+            0.79
+          ],
+          [
+            7,
+            2,
+            2,
+            0.67
+          ],
+          [
+            10,
+            0,
+            1,
+            0.82
+          ],
+          [
+            13,
+            3,
+            1,
+            0.67
+          ],
+          [
+            15,
+            0,
+            2,
+            0.56
+          ]
+        ],
+        "bass_steps": [
+          0,
+          6,
+          8,
+          14
+        ],
+        "kit": {
+          "0": [
+            "kick",
+            1.35
+          ],
+          "2": [
+            "closed",
+            0.66
+          ],
+          "4": [
+            "fill",
+            1.2
+          ],
+          "6": [
+            "closed",
+            0.56
+          ],
+          "8": [
+            "kick",
+            1.25
+          ],
+          "10": [
+            "open",
+            0.57
+          ],
+          "12": [
+            "fill",
+            1.3
+          ],
+          "14": [
+            "closed",
+            0.68
+          ]
+        }
+      },
+      "next": {
+        "original": 5,
+        "pluck": 3,
+        "air": 2,
+        "half_time": 2
+      }
+    },
+    "half_time": {
+      "phrases": 2,
+      "original_gain": 0,
+      "drum_gain": 0,
+      "pattern": [],
+      "register": 55,
+      "register_span": 24,
+      "length": 0.93,
+      "attack": 0.05,
+      "decay": 1.5,
+      "brightness_decay": 0.44,
+      "stretch": 0.0003,
+      "level": 0.31,
+      "pan": [
+        0.92,
+        1
+      ],
+      "partials": [
+        1,
+        0.12,
+        0.28,
+        0.08,
+        0.065,
+        0.02
+      ],
+      "melody": {
+        "center": 65,
+        "call": [
+          [
+            1,
+            3,
+            2,
+            0.85
+          ],
+          [
+            6,
+            1,
+            1,
+            0.7
+          ],
+          [
+            10,
+            2,
+            2,
+            0.85
+          ]
+        ],
+        "answer": [
+          [
+            0,
+            0,
+            1,
+            0.91
+          ],
+          [
+            7,
+            3,
+            2,
+            0.69
+          ],
+          [
+            12,
+            0,
+            0,
+            0.89
+          ]
+        ],
+        "bass_steps": [
+          0,
+          8
+        ],
+        "kit": {
+          "0": [
+            "kick",
+            1.25
+          ],
+          "6": [
+            "closed",
+            0.48
+          ],
+          "8": [
+            "fill",
+            1.24
+          ],
+          "13": [
+            "open",
+            0.55
+          ]
+        }
+      },
+      "next": {
+        "original": 5,
+        "keys": 3,
+        "pulse": 2,
+        "refrain": 2
+      }
+    }
+  },
+  "instruments": {
+    "replacement_bass": {
+      "register": 35,
+      "length": 0.54,
+      "attack": 0.015,
+      "decay": 2.1,
+      "brightness_decay": 0.62,
+      "stretch": 0,
+      "level": 0.24,
+      "pan": [
+        1,
+        1
+      ],
+      "partials": [
+        1,
+        0.37,
+        0.24,
+        0.1
+      ]
+    }
+  }
+}
