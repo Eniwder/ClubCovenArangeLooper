@@ -1,5 +1,6 @@
 """Stateful, reproducible rhythmic arrangement at bar boundaries."""
 
+from collections import deque
 import random
 
 
@@ -19,22 +20,43 @@ class Arrangement:
         self.energy = .35
         self.energy_goal = .35
         self.energy_bars = 0
+        self.arc_wait = 0
         self.arc_random = random.Random(seed ^ 0x4BC1)
         self.style_bars = 0
+        self.recent_styles = deque(["original"], maxlen=6)
+        self.recent_roles = deque(["recording"], maxlen=6)
+        self.arc = "rest"
+        self.recent_arcs = deque(["rest"], maxlen=3)
 
-    def update_energy(self):
+    def update_energy(self, section):
         arc = self.rules["energy"]
-        if self.energy_bars == 0:
-            self.energy_bars = self.arc_random.randint(*arc["bars"])
-            self.energy_goal = self.arc_random.uniform(*arc["target"])
+        if self.energy_bars == 0 and (section or not self.bar or self.arc_wait == 2):
+            states = arc["states"]
+            current = states[self.arc]
+            if self.bar:
+                choices = current["next"]
+                weights = [weight * (.68 ** self.recent_arcs.count(name))
+                           * (1 - .40 * abs(states[name]["target"] - section.get("energy", .5)))
+                           for name, weight in choices.items()]
+                self.arc = self.arc_random.choices(list(choices), weights)[0]
+                self.recent_arcs.append(self.arc)
+                current = states[self.arc]
+            self.energy_bars = self.arc_random.randint(*current["bars"])
+            self.energy_goal = current["target"]
+            self.arc_wait = 0
         self.energy += (self.energy_goal - self.energy) * arc["smoothing"]
-        self.energy_bars -= 1
+        if self.energy_bars:
+            self.energy_bars -= 1
+        else:
+            self.arc_wait += 1
 
-    def choose_style(self, section):
+    def choose_style(self, section, confidence=.6):
         styles = self.rules["styles"]
         current = styles[self.style]
         desired = current["phrases"] * self.rules["phrase_bars"]
         if not self.intensity:
+            if self.style == "original":
+                return
             new_style = "original"
         elif current["min_intensity"] > self.intensity:
             new_style = "original"
@@ -42,26 +64,50 @@ class Arrangement:
               or (not section and self.style_bars < desired + 3)):
             return
         else:
-            choices = {
-                name: weight * (1.05 - abs(spec["energy"] - self.energy))
-                * (1.05 - .60 * abs(spec["energy"] - section.get("energy", .5)))
-                for name, weight in current["next"].items()
-                if (spec := styles[name])["min_intensity"] <= self.intensity and weight > 0
-            }
+            choices = {}
+            favored = self.rules["energy"]["states"][self.arc]["favor"]
+            for name, weight in current["next"].items():
+                spec = styles[name]
+                if spec["min_intensity"] > self.intensity or weight <= 0:
+                    continue
+                mode = spec["lead_mode"]
+                role = spec["role"]
+                weight *= (1.05 - abs(spec["energy"] - self.energy))
+                weight *= 1.05 - .60 * abs(spec["energy"] - section.get("energy", .5))
+                weight *= .64 ** self.recent_styles.count(name) * .84 ** self.recent_roles.count(role)
+                if mode in favored:
+                    weight *= 1.6
+                if mode in ("replace", "trade"):
+                    weight *= .65 + .80 * confidence
+                    if list(self.recent_roles)[-2:] == ["recording"] * 2:
+                        weight *= 1.7
+                choices[name] = weight
             new_style = self.style_random.choices(list(choices), list(choices.values()))[0] if choices else "original"
-        if new_style != self.style:
-            self.style = new_style
-            self.style_bars = 0
+        self.style = new_style
+        self.style_bars = 0
+        self.recent_styles.append(new_style)
+        self.recent_roles.append(styles[new_style]["role"])
 
     def lead_events(self, contour, spec, entering=False):
         """Keep lead notes in source order and vary their attack or voicing."""
         events = {}
-        for step, (midi, onset, duration) in enumerate(contour):
+        style = self.rules["styles"][self.style]
+        performer = spec.get("performer", self.style)
+        exchange = spec.get("exchange")
+        if exchange and (self.style_bars - 1) % 4 >= 2:
+            performer = exchange
+        instrument = self.rules["instruments"].get(performer, style)
+        expression = instrument.get("expression", "neutral")
+        for step, (midi, onset, duration, confidence) in enumerate(contour):
             if midi < 0 or not (onset or (step == 0 and entering)):
                 continue
             if (spec["legato"] and duration == 1 and 0 < step < len(contour) - 1
                     and contour[step - 1][0] >= 0
                     and contour[step - 1][0] == contour[step + 1][0]):
+                continue
+            if duration == 1 and step % 4 and confidence < (.46 if expression == "bell" else .28) * 100:
+                continue
+            if expression == "bell" and step % 4 and duration == 1:
                 continue
             dst = step
             if (step in spec["delay_steps"] and step + 1 < len(contour) and duration > 1
@@ -69,17 +115,28 @@ class Arrangement:
                 dst += 1
                 duration -= 1
             gain = self.style_random.uniform(.82, 1) * (1 if step % 4 == 0 else .84)
-            events[dst] = [(self.style, int(midi), gain, int(duration))]
+            gain *= .76 + .24 * confidence / 100
+            delay = 0
+            if expression == "piano":
+                delay = 5 if step % 4 == 0 else 13
+                gain *= 1.08 if step in (0, 8) else .93
+            elif expression == "bell":
+                duration = max(5, duration)
+                delay = 12
+            elif expression == "strings":
+                duration += 1
+                delay = 0
+            events[dst] = [(performer, int(midi), gain, int(duration), delay)]
             if spec["shadow"] and step % 4 == 0:
-                events[dst].append(("melody_shadow", int(midi) - 12, gain * .48, int(duration)))
+                events[dst].append(("melody_shadow", int(midi) - 12, gain * .48, int(duration), delay))
             if spec["response"] and duration >= 4 and dst + 3 < len(contour):
-                events[dst + 3] = [("lead_echo", int(midi), gain * .64, int(duration) - 3)]
+                events[dst + 3] = [("lead_echo", int(midi), gain * .64, int(duration) - 3, 0)]
         return events
 
-    def next_bar(self, section=None, intensity=1.0):
+    def next_bar(self, section=None, intensity=1.0, confidence=.6):
         self.intensity = intensity
-        self.update_energy()
-        self.choose_style(section or {})
+        self.update_energy(section or {})
+        self.choose_style(section or {}, confidence)
         maximum = self.rules["styles"][self.style]["phrases"] * self.rules["phrase_bars"] + 3
         self.style_bars = min(self.style_bars + 1, maximum)
         phrase_bars = self.rules["phrase_bars"]

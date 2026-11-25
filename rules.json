@@ -81,18 +81,22 @@
         "pluck": 3,
         "pulse": 3,
         "air": 2,
-        "melody_keys": 6,
-        "melody_sync": 5,
-        "melody_legato": 4,
+        "melody_keys": 7,
+        "melody_sync": 4,
+        "melody_legato": 5,
         "melody_response": 4,
         "bass_break": 9,
         "drum_break": 1,
         "low_groove": 12,
         "chamber": 5,
-        "light": 12
+        "light": 12,
+        "silhouette": 4,
+        "piano_double": 1
       },
       "min_intensity": 0,
-      "energy": 0.49
+      "energy": 0.49,
+      "lead_mode": "original",
+      "role": "recording"
     },
     "keys": {
       "phrases": 2,
@@ -149,16 +153,20 @@
         "pluck": 2,
         "pulse": 2,
         "air": 2,
-        "melody_keys": 6,
-        "melody_sync": 5,
-        "melody_legato": 4,
+        "melody_keys": 7,
+        "melody_sync": 4,
+        "melody_legato": 5,
         "melody_response": 4,
         "bass_break": 4,
-        "drum_break": 2
+        "drum_break": 2,
+        "silhouette": 4,
+        "piano_double": 1
       },
       "min_intensity": 0.25,
       "energy": 0.39,
-      "unison": 0.22
+      "unison": 0.22,
+      "lead_mode": "original",
+      "role": "recording"
     },
     "pluck": {
       "phrases": 2,
@@ -216,16 +224,20 @@
         "keys": 2,
         "pulse": 3,
         "air": 2,
-        "melody_keys": 6,
-        "melody_sync": 5,
-        "melody_legato": 4,
+        "melody_keys": 7,
+        "melody_sync": 4,
+        "melody_legato": 5,
         "melody_response": 4,
         "bass_break": 4,
-        "drum_break": 2
+        "drum_break": 2,
+        "silhouette": 4,
+        "piano_double": 1
       },
       "min_intensity": 0.22,
       "energy": 0.43,
-      "trim_db": 1.5
+      "trim_db": 1.5,
+      "lead_mode": "original",
+      "role": "recording"
     },
     "pulse": {
       "phrases": 2,
@@ -288,15 +300,19 @@
         "keys": 2,
         "pluck": 3,
         "air": 3,
-        "melody_keys": 6,
-        "melody_sync": 5,
-        "melody_legato": 4,
+        "melody_keys": 7,
+        "melody_sync": 4,
+        "melody_legato": 5,
         "melody_response": 4,
         "bass_break": 4,
-        "drum_break": 2
+        "drum_break": 2,
+        "silhouette": 4,
+        "piano_double": 1
       },
       "min_intensity": 0.3,
-      "energy": 0.77
+      "energy": 0.77,
+      "lead_mode": "original",
+      "role": "recording"
     },
     "air": {
       "phrases": 1,
@@ -337,23 +353,27 @@
         "keys": 3,
         "pluck": 2,
         "pulse": 2,
-        "melody_keys": 6,
-        "melody_sync": 5,
-        "melody_legato": 4,
+        "melody_keys": 7,
+        "melody_sync": 4,
+        "melody_legato": 5,
         "melody_response": 4,
         "bass_break": 4,
         "drum_break": 2,
         "low_groove": 5,
-        "chamber": 6
+        "chamber": 6,
+        "silhouette": 4,
+        "piano_double": 1
       },
       "min_intensity": 0.32,
       "energy": 0.17,
-      "trim_db": 1
+      "trim_db": 1,
+      "lead_mode": "original",
+      "role": "recording"
     },
     "melody_keys": {
       "register": 60,
       "register_span": 29,
-      "length": 0.65,
+      "length": 1.04,
       "attack": 0.008,
       "decay": 3.2,
       "brightness_decay": 1.1,
@@ -365,15 +385,15 @@
       ],
       "partials": [
         1,
-        0.64,
-        0.39,
-        0.21,
-        0.13,
-        0.08,
+        0.7,
+        0.35,
+        0.24,
+        0.17,
+        0.11,
         0.045
       ],
       "phrases": 2,
-      "original_gain": 0.2888,
+      "original_gain": 0,
       "drum_gain": 0,
       "pattern": [],
       "melody": {
@@ -385,12 +405,15 @@
       "next": {
         "original": 3,
         "pluck": 2,
-        "melody_sync": 5,
+        "melody_sync": 4,
         "melody_legato": 4,
         "melody_response": 4,
         "bass_break": 4,
         "drum_break": 2,
-        "chamber": 4
+        "chamber": 4,
+        "melody_keys": 4,
+        "silhouette": 4,
+        "groove_return": 3
       },
       "rhythm": {
         "bass_steps": [
@@ -400,17 +423,31 @@
         "kit": {
           "0": [
             "kick",
-            0.68
+            0.47
           ],
           "8": [
             "kick",
-            0.55
+            0.36
           ]
+        },
+        "harmony": {
+          "steps": [
+            0,
+            6,
+            8,
+            14
+          ],
+          "instrument": "soft_keys",
+          "gain": 0.62
         }
       },
       "min_intensity": 0.35,
       "energy": 0.39,
-      "unison": 0.22
+      "unison": 0.22,
+      "lead_mode": "replace",
+      "role": "piano",
+      "trim_db": 2.2,
+      "expression": "piano"
     },
     "melody_sync": {
       "register": 60,
@@ -433,7 +470,7 @@
         0.15
       ],
       "phrases": 2,
-      "original_gain": 0.2584,
+      "original_gain": 0,
       "drum_gain": 0,
       "pattern": [],
       "melody": {
@@ -450,11 +487,14 @@
       "next": {
         "original": 3,
         "air": 2,
-        "melody_keys": 5,
+        "melody_keys": 4,
         "melody_legato": 4,
         "melody_response": 4,
         "bass_break": 4,
-        "drum_break": 2
+        "drum_break": 2,
+        "melody_sync": 4,
+        "silhouette": 4,
+        "groove_return": 3
       },
       "rhythm": {
         "bass_steps": [
@@ -494,17 +534,30 @@
             "closed",
             0.68
           ]
+        },
+        "harmony": {
+          "steps": [
+            0,
+            8
+          ],
+          "instrument": "soft_harmony",
+          "gain": 0.58
         }
       },
       "min_intensity": 0.51,
-      "energy": 0.78
+      "energy": 0.78,
+      "lead_mode": "replace",
+      "role": "synth",
+      "trim_db": 1,
+      "expression": "synth",
+      "unison": 0.19
     },
     "melody_legato": {
       "register": 60,
       "register_span": 29,
-      "length": 0.9,
-      "attack": 0.082,
-      "decay": 1.9,
+      "length": 1.55,
+      "attack": 0.061,
+      "decay": 0.9,
       "brightness_decay": 1.1,
       "stretch": 0,
       "level": 0.24,
@@ -520,7 +573,7 @@
         0.09
       ],
       "phrases": 2,
-      "original_gain": 0.2964,
+      "original_gain": 0,
       "drum_gain": 0,
       "pattern": [],
       "melody": {
@@ -532,11 +585,14 @@
       "next": {
         "original": 3,
         "keys": 2,
-        "melody_keys": 5,
+        "melody_keys": 4,
         "melody_sync": 4,
         "melody_response": 4,
         "bass_break": 4,
-        "drum_break": 2
+        "drum_break": 2,
+        "melody_legato": 4,
+        "silhouette": 4,
+        "groove_return": 3
       },
       "rhythm": {
         "bass_steps": [
@@ -546,33 +602,38 @@
         "kit": {
           "0": [
             "kick",
-            1.25
-          ],
-          "6": [
-            "closed",
             0.48
           ],
           "8": [
             "fill",
-            1.24
-          ],
-          "13": [
-            "open",
-            0.55
+            0.36
           ]
+        },
+        "harmony": {
+          "steps": [
+            0,
+            8
+          ],
+          "instrument": "soft_harmony",
+          "gain": 0.58
         }
       },
       "min_intensity": 0.43,
-      "energy": 0.25
+      "energy": 0.25,
+      "lead_mode": "replace",
+      "role": "strings",
+      "trim_db": -0.5,
+      "expression": "strings",
+      "vibrato": 0.11
     },
     "melody_response": {
       "register": 60,
       "register_span": 29,
-      "length": 0.52,
-      "attack": 0.022,
-      "decay": 3.8,
+      "length": 1.3,
+      "attack": 0.004,
+      "decay": 2.7,
       "brightness_decay": 1.1,
-      "stretch": 0.0006,
+      "stretch": 0.011,
       "level": 0.29,
       "pan": [
         1,
@@ -580,29 +641,33 @@
       ],
       "partials": [
         1,
-        0.22,
-        0.44,
-        0.1,
-        0.05
+        0.16,
+        0.32,
+        0.08,
+        0.14,
+        0.09
       ],
       "phrases": 2,
-      "original_gain": 0.2888,
+      "original_gain": 0,
       "drum_gain": 0,
       "pattern": [],
       "melody": {
         "delay_steps": [],
         "legato": false,
         "shadow": false,
-        "response": true
+        "response": false
       },
       "next": {
         "original": 3,
         "pluck": 2,
-        "melody_keys": 5,
+        "melody_keys": 4,
         "melody_sync": 4,
         "melody_legato": 4,
         "bass_break": 4,
-        "drum_break": 2
+        "drum_break": 2,
+        "melody_response": 4,
+        "silhouette": 4,
+        "groove_return": 3
       },
       "rhythm": {
         "bass_steps": [
@@ -612,24 +677,33 @@
         "kit": {
           "0": [
             "kick",
-            0.82
+            0.52
           ],
-          "4": [
+          "6": [
             "closed",
-            0.56
+            0.42
           ],
-          "8": [
-            "kick",
-            0.6
-          ],
-          "12": [
+          "10": [
             "open",
-            0.45
+            0.34
           ]
+        },
+        "harmony": {
+          "steps": [
+            0,
+            8
+          ],
+          "instrument": "soft_harmony",
+          "gain": 0.58
         }
       },
       "min_intensity": 0.49,
-      "energy": 0.55
+      "energy": 0.55,
+      "lead_mode": "replace",
+      "role": "bell",
+      "trim_db": 1,
+      "expression": "bell",
+      "echo": 0.17
     },
     "bass_break": {
       "phrases": 2,
@@ -688,7 +762,9 @@
       },
       "min_intensity": 0.6,
       "energy": 0.41,
-      "trim_db": 2
+      "trim_db": 2,
+      "lead_mode": "omit",
+      "role": "bass"
     },
     "drum_break": {
       "phrases": 1,
@@ -742,7 +818,9 @@
       },
       "min_intensity": 0.72,
       "energy": 0.31,
-      "trim_db": 8
+      "trim_db": 8,
+      "lead_mode": "omit",
+      "role": "drums"
     },
     "low_groove": {
       "phrases": 2,
@@ -856,7 +934,9 @@
         "groove_return": 1
       },
       "min_intensity": 0.61,
-      "energy": 0.61
+      "energy": 0.61,
+      "lead_mode": "omit",
+      "role": "bass"
     },
     "groove_return": {
       "register": 60,
@@ -879,14 +959,16 @@
         0.05
       ],
       "phrases": 1,
-      "original_gain": 0.42,
+      "original_gain": 0,
       "drum_gain": 0,
       "pattern": [],
       "melody": {
         "delay_steps": [],
         "legato": false,
         "shadow": false,
-        "response": true
+        "response": false,
+        "performer": "melody_keys",
+        "exchange": "melody_legato"
       },
       "next": {
         "original": 4,
@@ -956,11 +1038,21 @@
             "closed",
             0.77
           ]
+        },
+        "harmony": {
+          "steps": [
+            2,
+            10
+          ],
+          "instrument": "soft_harmony",
+          "gain": 0.47
         }
       },
       "min_intensity": 0.54,
       "energy": 0.76,
-      "trim_db": -1
+      "trim_db": -0.7,
+      "lead_mode": "trade",
+      "role": "exchange"
     },
     "chamber": {
       "phrases": 2,
@@ -1021,12 +1113,19 @@
       ],
       "next": {
         "original": 4,
-        "melody_keys": 4,
+        "melody_keys": 7,
         "low_groove": 3,
         "air": 2,
-        "pulse": 3
+        "pulse": 3,
+        "melody_legato": 5,
+        "melody_response": 4,
+        "melody_sync": 4,
+        "silhouette": 4,
+        "piano_double": 1
       },
-      "unison": 0.22
+      "unison": 0.22,
+      "lead_mode": "original",
+      "role": "recording"
     },
     "light": {
       "phrases": 1,
@@ -1041,7 +1140,85 @@
         "pluck": 3,
         "chamber": 2,
         "pulse": 2
+      },
+      "lead_mode": "original",
+      "role": "recording"
+    },
+    "silhouette": {
+      "phrases": 2,
+      "original_gain": 0,
+      "drum_gain": 0,
+      "pattern": [],
+      "min_intensity": 0.5,
+      "energy": 0.2,
+      "lead_mode": "omit",
+      "role": "ambient",
+      "rhythm": {
+        "kit": {},
+        "bass_steps": [
+          0
+        ],
+        "harmony": {
+          "steps": [
+            0,
+            8
+          ],
+          "instrument": "soft_harmony",
+          "gain": 0.96
+        }
+      },
+      "next": {
+        "melody_keys": 6,
+        "melody_legato": 5,
+        "original": 4,
+        "groove_return": 3
       }
+    },
+    "piano_double": {
+      "register": 60,
+      "register_span": 29,
+      "length": 1.04,
+      "attack": 0.008,
+      "decay": 3.2,
+      "brightness_decay": 1.1,
+      "stretch": 0.0018,
+      "level": 0.13,
+      "pan": [
+        1,
+        0.93
+      ],
+      "partials": [
+        1,
+        0.7,
+        0.35,
+        0.24,
+        0.17,
+        0.11,
+        0.045
+      ],
+      "phrases": 1,
+      "original_gain": 0.74,
+      "drum_gain": 0,
+      "pattern": [],
+      "melody": {
+        "delay_steps": [],
+        "legato": false,
+        "shadow": false,
+        "response": false
+      },
+      "next": {
+        "original": 4,
+        "melody_keys": 5,
+        "melody_legato": 4,
+        "light": 3
+      },
+      "min_intensity": 0.3,
+      "energy": 0.55,
+      "unison": 0.22,
+      "lead_mode": "reinforce",
+      "role": "piano",
+      "trim_db": 0,
+      "expression": "piano"
     }
   },
   "instruments": {
@@ -1122,17 +1299,151 @@
         0.18,
         0.058
       ]
+    },
+    "soft_harmony": {
+      "register": 47,
+      "length": 1.4,
+      "attack": 0.085,
+      "decay": 1.8,
+      "brightness_decay": 0.7,
+      "stretch": 0.0004,
+      "vibrato": 0.035,
+      "level": 0.16,
+      "pan": [
+        0.77,
+        1
+      ],
+      "partials": [
+        1,
+        0.29,
+        0.13,
+        0.08
+      ]
+    },
+    "soft_keys": {
+      "register": 47,
+      "length": 0.51,
+      "attack": 0.012,
+      "decay": 4.4,
+      "brightness_decay": 1.6,
+      "stretch": 0.0015,
+      "unison": 0.21,
+      "level": 0.15,
+      "pan": [
+        0.84,
+        1
+      ],
+      "partials": [
+        1,
+        0.49,
+        0.27,
+        0.15,
+        0.09
+      ]
     }
   },
   "energy": {
-    "bars": [
-      13,
-      27
-    ],
-    "target": [
-      0.14,
-      0.91
-    ],
-    "smoothing": 0.12
+    "smoothing": 0.14,
+    "states": {
+      "rest": {
+        "target": 0.22,
+        "bars": [
+          8,
+          17
+        ],
+        "favor": [
+          "omit",
+          "replace"
+        ],
+        "next": {
+          "develop": 5,
+          "return": 3,
+          "rise": 1
+        }
+      },
+      "develop": {
+        "target": 0.53,
+        "bars": [
+          8,
+          19
+        ],
+        "favor": [
+          "trade",
+          "replace"
+        ],
+        "next": {
+          "rise": 5,
+          "rest": 2,
+          "return": 1,
+          "release": 1
+        }
+      },
+      "rise": {
+        "target": 0.76,
+        "bars": [
+          6,
+          13
+        ],
+        "favor": [
+          "trade",
+          "replace"
+        ],
+        "next": {
+          "peak": 5,
+          "develop": 2,
+          "release": 2
+        }
+      },
+      "peak": {
+        "target": 0.91,
+        "bars": [
+          5,
+          12
+        ],
+        "favor": [
+          "original",
+          "trade",
+          "reinforce"
+        ],
+        "next": {
+          "release": 6,
+          "return": 2,
+          "develop": 1
+        }
+      },
+      "release": {
+        "target": 0.34,
+        "bars": [
+          7,
+          16
+        ],
+        "favor": [
+          "omit",
+          "replace"
+        ],
+        "next": {
+          "rest": 4,
+          "return": 4,
+          "develop": 2
+        }
+      },
+      "return": {
+        "target": 0.62,
+        "bars": [
+          7,
+          16
+        ],
+        "favor": [
+          "original",
+          "reinforce"
+        ],
+        "next": {
+          "develop": 4,
+          "rest": 3,
+          "rise": 2,
+          "release": 1
+        }
+      }
+    }
   }
 }

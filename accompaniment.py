@@ -22,11 +22,13 @@ def analyse_pitches(source, track):
         order = np.argsort(chroma)[::-1]
         upper = next((int(pc) for pc in order if (pc - bass) % 12 not in (0, 1, 6, 11)
                       and chroma[pc] >= chroma[order[0]] * 0.48), bass)
-        chord = max(triads, key=lambda pcs: sum(chroma[pc] for pc in pcs)
-                    + .18 * chroma.max() * (bass in pcs))
+        ranked = sorted((sum(chroma[pc] for pc in pcs) + .18 * chroma.max() * (bass in pcs), pcs)
+                        for pcs in triads)
+        score, chord = ranked[-1]
         fifth = chord[2] if bass in chord and chroma[chord[2]] >= .35 * chroma.max() else upper
-        pitches.append((bass, upper, fifth))
-    return pitches
+        certainty = min(1, 5 * (score - ranked[-2][0]) / max(score, 1e-6))
+        pitches.append((bass, upper, fifth, chord[0], chord[1], chord[2], round(100 * certainty)))
+    return np.asarray(pitches, dtype=np.int16)
 
 
 def analyse_melody(source, track):
@@ -65,8 +67,15 @@ def analyse_melody(source, track):
     melody = np.array(melody[::-1], dtype=np.int16)
     strength = np.asarray(strengths)[np.arange(len(melody)), melody - notes[0]]
     active = strength >= max(float(np.percentile(strength, 45)) * .21, 1e-5)
-    events = np.zeros((len(melody), 3), dtype=np.int16)
+    grid_scores = np.asarray(scores)
+    picked = grid_scores[np.arange(len(melody)), melody - notes[0]]
+    grid_scores[np.arange(len(melody)), melody - notes[0]] = -np.inf
+    margin = picked - grid_scores.max(axis=1)
+    persistence = np.r_[False, melody[1:] == melody[:-1]] | np.r_[melody[:-1] == melody[1:], False]
+    certainty = np.clip(.48 + .65 * margin + .17 * persistence, 0, 1)
+    events = np.zeros((len(melody), 4), dtype=np.int16)
     events[:, 0] = np.where(active, melody, -1)
+    events[:, 3] = np.where(active, np.rint(100 * certainty), 0)
     for step in range(len(melody) - 1, -1, -1):
         if not active[step]:
             continue
@@ -87,6 +96,8 @@ def make_instruments(rate, styles):
         notes = {}
         for midi in range(spec['register'], spec['register'] + spec.get('register_span', 12)):
             phase = 2 * np.pi * (440 * 2 ** ((midi - 69) / 12)) * t
+            if spec.get("vibrato"):
+                phase += spec["vibrato"] * np.sin(2 * np.pi * 5.1 * t) * np.clip((t - .08) / .24, 0, 1)
             signal = sum(
                 amplitude * np.sin(phase * (harmonic + spec['stretch'] * harmonic ** 2))
                 * np.exp(-t * (spec['decay'] + harmonic * spec['brightness_decay']))
@@ -105,3 +116,24 @@ def make_instruments(rate, styles):
             notes[midi] = stereo
         instruments[name] = notes
     return instruments
+
+
+def make_kit(rate):
+    """Short drum voices without pitched material from the recording."""
+    kit = {}
+    random = np.random.default_rng(714)
+    for name, seconds, level in (("kick", .115, .23), ("fill", .105, .14),
+                                 ("closed", .045, .075), ("open", .110, .085)):
+        t = np.arange(round(rate * seconds)) / rate
+        noise = random.standard_normal(len(t))
+        bright = np.diff(noise, prepend=0)
+        if name == "kick":
+            phase = 2 * np.pi * (43 * t + 52 * .022 * (1 - np.exp(-t / .022)))
+            wave = np.sin(phase) * np.exp(-t / .035) + .05 * bright * np.exp(-t / .006)
+        elif name == "fill":
+            wave = (.72 * noise + .20 * np.sin(2 * np.pi * 177 * t)) * np.exp(-t / .027)
+        else:
+            wave = bright * np.exp(-t / (seconds / 4))
+        wave *= np.clip(t / .002, 0, 1) * np.clip((t[-1] - t) / .018, 0, 1)
+        kit[name] = (wave[:, None] * (level / np.max(np.abs(wave))) * (1, .93)).astype(np.float32)
+    return kit

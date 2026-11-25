@@ -1,0 +1,7 @@
+startup 0.192 s, working set 217.1 MiB
+seed 42: wall 4.15 s, CPU 4.11 s, render p99/max 0.352/6.662 ms, peak 0.963, near-silence 0.85 s
+seed 44: wall 3.89 s, CPU 3.89 s, render p99/max 0.326/0.970 ms, peak 0.965, near-silence 0.85 s
+seed 117: wall 4.00 s, CPU 4.00 s, render p99/max 0.330/0.852 ms, peak 0.959, near-silence 0.85 s
+frame 8183808: traced current/peak (3550, 367100)
+frame 36855808: traced current/peak (7603, 369482)
+device 12 s: 1122 callbacks, p99/max 0.116/0.216 ms, 0 underruns, PortAudio load 0.66%, process CPU 1.69%, working set 225.6 MiB

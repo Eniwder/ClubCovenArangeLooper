@@ -32,7 +32,7 @@ def validate(config, rules):
             raise ValueError(f"{name} の音色設定が不正です。")
         for value in spec["pan"] + spec["partials"]:
             number(value, 0, 2, name)
-        for key in ("unison", "echo"):
+        for key in ("unison", "echo", "vibrato"):
             number(spec.get(key, 0), 0, .5, name)
 
     number(config["target_lufs"], -35, -8, "target_lufs")
@@ -68,12 +68,17 @@ def validate(config, rules):
         steps(rules[key], key)
     energy = rules["energy"]
     number(energy["smoothing"], .01, 1, "energy.smoothing")
-    low, high = energy["bars"]
-    number(low, 1, 100, "energy.bars", True)
-    number(high, low, 100, "energy.bars", True)
-    low, high = energy["target"]
-    number(low, 0, 1, "energy.target")
-    number(high, low, 1, "energy.target")
+    modes = {"original", "reinforce", "replace", "omit", "trade"}
+    for name, arc in energy["states"].items():
+        low, high = arc["bars"]
+        number(low, 1, 100, name, True)
+        number(high, low, 100, name, True)
+        number(arc["target"], 0, 1, name)
+        weights(arc["next"], energy["states"].keys(), name)
+        if set(arc["favor"]) - modes:
+            raise ValueError(f"{name} の編曲方式が不正です。")
+    if "rest" not in energy["states"]:
+        raise ValueError("エネルギー設定に rest が必要です。")
     styles = rules["styles"]
     if styles["original"]["min_intensity"] != 0 or styles["original"]["original_gain"] != 1:
         raise ValueError("original の強度とゲインは 0 と 1 に設定してください。")
@@ -83,6 +88,13 @@ def validate(config, rules):
         for key in ("min_intensity", "energy", "original_gain", "drum_gain"):
             number(spec[key], 0, 1, f"{name}.{key}")
         weights(spec["next"], styles.keys(), name)
+        mode = spec["lead_mode"]
+        if (mode not in modes or not isinstance(spec["role"], str)
+                or (mode in ("replace", "omit", "trade") and spec["original_gain"] != 0)
+                or bool(spec.get("melody")) != (mode in ("reinforce", "replace", "trade"))
+                or (mode == "trade" and not spec["melody"].get("exchange"))
+                or (mode in ("replace", "omit", "trade") and not spec.get("rhythm"))):
+            raise ValueError(f"{name} の旋律方式と原曲ゲインの組み合わせが不正です。")
         for position, tone, gain in spec["pattern"]:
             steps([position], name)
             number(tone, 0, 2, name, True)
@@ -93,6 +105,12 @@ def validate(config, rules):
             steps(spec["melody"]["delay_steps"], name)
             if not spec["register"] <= 60 or spec["register"] + spec.get("register_span", 12) <= 88:
                 raise ValueError(f"{name} の音域は MIDI 60〜88 を含めてください。")
+            for key in ("performer", "exchange"):
+                if key in spec["melody"]:
+                    target = spec["melody"][key]
+                    voice = rules["instruments"].get(target, styles.get(target))
+                    if not voice or not voice["register"] <= 60 or voice["register"] + voice.get("register_span", 12) <= 88:
+                        raise ValueError(f"{name} の担当楽器 {target} の音域が不正です。")
         rhythm = spec.get("rhythm", {})
         steps(rhythm.get("bass_steps", ()), name)
         for variant in rhythm.get("bass_variants", ()):
@@ -104,6 +122,11 @@ def validate(config, rules):
             if hit not in config["hits"]:
                 raise ValueError(f"打音 {hit} がありません。")
             number(gain, 0, 2, name)
+        if harmony := rhythm.get("harmony"):
+            steps(harmony["steps"], name)
+            if harmony["instrument"] not in rules["instruments"]:
+                raise ValueError(f"{name} の伴奏音色がありません。")
+            number(harmony["gain"], 0, 1, name)
     if (styles["original"]["pattern"] or styles["original"].get("melody")
             or styles["original"].get("rhythm") or styles["original"].get("trim_db", 0)):
         raise ValueError("original に追加演奏を設定できません。")

@@ -1,0 +1,14 @@
+before.wav -18.8 -21.0
+after.wav -18.3 -21.0
+after [(16.375, 16.375, 'original'), (24.375, 24.375, 'silhouette'), (40.375, 40.375, 'groove_return'), (48.375, 48.375, 'melody_keys'), (64.375, 64.375, 'groove_return'), (72.375, 72.375, 'pulse'), (88.375, 88.375, 'melody_sync'), (108.375, 40.375, 'bass_break'), (124.375, 56.375, 'low_groove'), (140.375, 72.375, 'groove_return'), (148.375, 80.375, 'original'), (156.375, 88.375, 'chamber'), (176.375, 40.375, 'melody_response'), (192.375, 56.375, 'silhouette'), (208.375, 72.375, 'melody_legato'), (224.375, 88.375, 'melody_response')]
+after arcs [(0.0, 'rest'), (48.3, 'develop'), (88.2, 'rise'), (108.4, 'release'), (140.3, 'return'), (166.2, 'rest'), (200.4, 'develop'), (232.3, 'rest')]
+twelve-minutes.wav -17.9 -21.0
+long arcs [(0.0, 'rest'), (48.3, 'develop'), (80.2, 'rise'), (96.3, 'release'), (116.2, 'return'), (132.3, 'develop'), (164.4, 'rise'), (176.3, 'release'), (192.3, 'return'), (216.2, 'rest'), (234.3, 'return'), (260.3, 'develop'), (292.4, 'rise'), (310.3, 'develop'), (342.4, 'rise'), (358.2, 'release'), (388.3, 'rest'), (412.3, 'develop'), (438.3, 'rise'), (464.2, 'develop'), (488.3, 'rest'), (508.2, 'return'), (540.3, 'develop'), (576.3, 'rise'), (592.2, 'release'), (608.3, 'rest'), (642.2, 'develop'), (684.4, 'rise'), (708.3, 'release')]
+long styles Counter({'melody_keys': 9, 'melody_sync': 7, 'original': 5, 'melody_legato': 5, 'melody_response': 4, 'groove_return': 4, 'pluck': 3, 'bass_break': 3, 'silhouette': 3, 'chamber': 1, 'air': 1, 'low_groove': 1})
+same-phrase-original.wav -17.8 -21.0
+same-phrase-mask.wav -20.6 -21.0
+same-phrase-accompaniment.wav -20.8 -21.0
+same-phrase-piano.wav -17.9 -21.0
+same-phrase-strings.wav -17.7 -21.0
+same-phrase-bell.wav -19.1 -21.0
+same-phrase-exchange.wav -17.5 -21.0

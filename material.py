@@ -6,7 +6,7 @@ import re
 import subprocess
 
 import numpy as np
-from accompaniment import analyse_melody, analyse_pitches, make_instruments
+from accompaniment import analyse_melody, analyse_pitches, make_instruments, make_kit
 from backing import make_backing
 from cache import cache_key, read_cache, write_cache
 
@@ -55,6 +55,7 @@ class Track:
         self.step = self.frames(60 / config["bpm"] / 4)
         self.steps_per_bar = config["beats_per_bar"] * 4
         self.sections = {self.frames(section["start"]): section for section in config["sections"]}
+        self.kit = make_kit(self.rate)
         source_path = ROOT / config["source"]
         self.cache_hit = False
         if cache_path is not None:
@@ -65,8 +66,8 @@ class Track:
                     self.load_arrays(cached)
                     steps = (self.end - self.first_bar + self.step - 1) // self.step
                     if (self.audio.shape != (self.end, 2) or self.backing.shape != self.audio.shape
-                            or self.notes.shape != (steps, 3) or self.melody.shape != (steps,)
-                            or self.pitches.shape != ((steps + 3) // 4, 3)
+                            or self.notes.shape != (steps, 4) or self.melody.shape != (steps,)
+                            or self.pitches.shape != ((steps + 3) // 4, 7)
                             or self.hits.keys() != config["hits"].keys()):
                         raise ValueError("キャッシュの形状が一致しません。")
                 except (KeyError, ValueError):
@@ -137,6 +138,15 @@ class Track:
         if position >= self.end:
             position = self.start + (position - self.end) % (self.end - self.start)
         return self.notes[(position - self.first_bar) // self.step]
+
+    def phrase_confidence_at(self, position):
+        width = self.steps_per_bar * 4
+        start = (position - self.first_bar) // self.step
+        phrase = self.notes[start:start + width]
+        if len(phrase) < width:
+            return float(sum(self.melody_at(position + step * self.step)[3]
+                             for step in range(width)) / (100 * width))
+        return float(phrase[:, 3].mean() / 100)
 
     def frames(self, seconds):
         return round(seconds * self.rate)

@@ -87,9 +87,10 @@ class ClubCovenTests(unittest.TestCase):
         a.style = "melody_keys"
         a.intensity = 1
         spec = self.rules["styles"][a.style]["melody"]
-        bar = [(-1, 0, 0)] * 15 + [(67, 1, 4)]
-        self.assertEqual(a.lead_events(bar, spec)[15][0][1::2], (67, 4))
-        held = [(67, 0, 3), (67, 0, 2), (67, 0, 1), (67, 1, 1)]
+        bar = [(-1, 0, 0, 0)] * 15 + [(67, 1, 4, 92)]
+        note = a.lead_events(bar, spec)[15][0]
+        self.assertEqual((note[1], note[3]), (67, 4))
+        held = [(67, 0, 3, 92), (67, 0, 2, 92), (67, 0, 1, 92), (67, 1, 1, 92)]
         self.assertEqual(set(a.lead_events(held, spec)), {3})
         engine = Engine(self.track, self.rules, 44)
         engine.arrangement.style = a.style
@@ -99,7 +100,7 @@ class ClubCovenTests(unittest.TestCase):
         engine.lead_plan = a.lead_events(bar, spec)
         engine.source_pos = self.track.first_bar + 15 * self.track.step
         engine.render(np.empty((self.track.step + 1, 2), np.float32))
-        self.assertTrue(any(position > self.track.step for _, position, _, _ in engine.voices))
+        self.assertTrue(any(position > self.track.step // 2 for _, position, _, _ in engine.voices))
 
     def test_bad_settings(self):
         for path, value in (("hit_peak", float("nan")), ("phrase_bars", 0)):
@@ -114,6 +115,55 @@ class ClubCovenTests(unittest.TestCase):
         rules["styles"]["original"]["next"] = {"missing": 1}
         with self.assertRaises(ValueError):
             validate(self.config, rules)
+
+    def test_same_style_renews_and_recent_history_is_bounded(self):
+        rules = copy.deepcopy(self.rules)
+        rules["styles"]["light"]["next"] = {"light": 1}
+        a = Arrangement(rules, 44)
+        a.style = "light"
+        a.style_bars = rules["phrase_bars"]
+        a.next_bar({"energy": .5}, 1)
+        self.assertEqual(a.style, "light")
+        self.assertEqual(a.style_bars, 1)
+        for _ in range(250):
+            a.next_bar({"energy": .5}, 1)
+        self.assertEqual(len(a.recent_styles), 6)
+        self.assertLessEqual(len(a.recent_arcs), 3)
+
+    def test_reconstruction_has_no_source_audio_and_can_isolate_backing(self):
+        t = self.track
+
+        def play(lead):
+            engine = Engine(t, self.rules, 44, include_lead=lead)
+            engine.arrangement.style = "melody_keys"
+            engine.source_pos = t.frames(48.375)
+            engine.until_step = 0
+            engine.mix_from = engine.mix_to = 0
+            out = np.empty((t.frames(6), 2), np.float32)
+            for start in range(0, len(out), 8192):
+                engine.render(out[start:start + 8192])
+            self.assertEqual(engine.mix_to, 0)
+            return out
+
+        with_lead = play(True)
+        backing = play(False)
+        self.assertGreater(float(np.max(np.abs(with_lead - backing))), .05)
+        self.assertGreater(float(np.max(np.abs(backing))), .05)
+        with (patch.object(t, "audio", np.zeros_like(t.audio)),
+              patch.object(t, "backing", np.zeros_like(t.backing)),
+              patch.object(t, "hits", {})):
+            np.testing.assert_array_equal(with_lead, play(True))
+            np.testing.assert_array_equal(backing, play(False))
+
+    def test_trade_changes_performer_at_two_bar_boundaries(self):
+        a = Arrangement(self.rules, 44)
+        a.style = "groove_return"
+        contour = [(67, 1, 4, 88)]
+        spec = self.rules["styles"][a.style]["melody"]
+        for age, expected in enumerate(("melody_keys", "melody_keys", "melody_legato", "melody_legato"), 1):
+            a.style_bars = age
+            plan = a.lead_events(contour, spec)
+            self.assertEqual(plan[0][0][0], expected)
 
     def test_cache_reuse_invalidation_and_manual_rebuild(self):
         with TemporaryDirectory() as folder:
