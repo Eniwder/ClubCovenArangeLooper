@@ -15,8 +15,31 @@ class Arrangement:
         self.style_age = 0
         self.style_random = random.Random(seed ^ 0x2764)
         self.tone_pattern = {}
-        self.melody_pattern = {}
-        self.melody_rotation = 0
+
+    def lead_events(self, contour, spec):
+        """Keep lead notes in source order and vary their attack or voicing."""
+        if spec["legato"]:
+            contour = [
+                contour[step - 1] if 0 < step < len(contour) - 1
+                and contour[step - 1] == contour[step + 1] else midi
+                for step, midi in enumerate(contour)
+            ]
+        events = {}
+        for step, midi in enumerate(contour):
+            if step and midi == contour[step - 1]:
+                continue
+            dst = step
+            if (step in spec["delay_steps"] and step + 1 < len(contour)
+                    and contour[step + 1] == midi and self.style_random.random() < .8):
+                dst += 1
+            gain = self.style_random.uniform(.82, 1) * (1 if step % 4 == 0 else .84)
+            events[dst] = [(self.style, midi, gain)]
+            if spec["shadow"] and step % 4 == 0:
+                events[dst].append(("melody_shadow", midi - 12, gain * .48))
+            if spec["response"] and step + 3 < len(contour) and step % 4 <= 1:
+                if all(note == midi for note in contour[step:step + 4]):
+                    events[step + 3] = [("lead_echo", midi, gain * .64)]
+        return events
 
     def next_bar(self):
         phrase_bars = self.rules["phrase_bars"]
@@ -46,17 +69,6 @@ class Arrangement:
             for step, tone, gain in pattern
             if position % 2 == 0 or gain >= .65 or self.style_random.random() < .60
         }
-        melody = self.rules["styles"][self.style].get("melody")
-        self.melody_pattern = {}
-        if melody:
-            if position == 0:
-                self.melody_rotation = self.style_random.randrange(4)
-            score = melody["answer"] if position % 2 else melody["call"]
-            self.melody_pattern = {
-                step: ((beat + self.melody_rotation) % 4, tone,
-                       gain * self.style_random.uniform(.86, 1))
-                for step, beat, tone, gain in score
-            }
 
         current = states[self.state]
         count = current["steps"]

@@ -5,7 +5,8 @@ from pathlib import Path
 import subprocess
 
 import numpy as np
-from accompaniment import analyse_pitches, make_instruments
+from accompaniment import analyse_melody, analyse_pitches, make_instruments
+from backing import make_backing
 
 ROOT = Path(__file__).resolve().parent
 
@@ -57,6 +58,12 @@ class Track:
             for name, spec in config["hits"].items()
         }
         self.pitches = analyse_pitches(source, self)
+        self.melody = analyse_melody(source, self)
+        self.backing = make_backing(audio, self, rules["backing"])
+        self.backing[self.end - fade:self.end] = (
+            self.backing[self.end - fade:self.end] * (1 - blend[:, None])
+            + self.backing[self.start - fade:self.start] * blend[:, None]
+        )
         playable = {name: spec for name, spec in rules["styles"].items()
                     if spec["pattern"] or "melody" in spec}
         self.instruments = make_instruments(self.rate, playable | rules["instruments"])
@@ -65,6 +72,11 @@ class Track:
         if position >= self.end:
             position = self.start + (position - self.end) % (self.end - self.start)
         return self.pitches[(position - self.first_bar) // (self.step * 4)]
+
+    def melody_at(self, position):
+        if position >= self.end:
+            position = self.start + (position - self.end) % (self.end - self.start)
+        return self.melody[(position - self.first_bar) // self.step]
 
     def frames(self, seconds):
         return round(seconds * self.rate)

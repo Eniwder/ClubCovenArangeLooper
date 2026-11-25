@@ -5,7 +5,7 @@ import numpy as np
 
 def analyse_pitches(source, track):
     beat = track.step * 4
-    notes = np.arange(35, 89)
+    notes = np.arange(35, 81)
     frequencies = 440 * 2 ** ((notes - 69) / 12)
     bins = np.rint(frequencies * 65536 / track.rate).astype(int)
     window = np.hanning(beat)
@@ -19,14 +19,42 @@ def analyse_pitches(source, track):
         order = np.argsort(chroma)[::-1]
         upper = next((int(pc) for pc in order if (pc - bass) % 12 not in (0, 1, 6, 11)
                       and chroma[pc] >= chroma[order[0]] * 0.48), bass)
-        # Discount upper partials of lower notes before choosing a lead candidate.
-        # A stereo mix still yields a candidate, rather than a clean transcription.
-        lead_bins = bins[25:]
-        partial = spectrum[np.rint(lead_bins / 2).astype(int)]
-        salience = power[25:] / (1 + partial / max(np.median(power), 1e-6))
-        lead = int(notes[25:][np.argmax(salience)] % 12)
-        pitches.append((bass, upper, lead))
+        pitches.append((bass, upper))
     return pitches
+
+
+def analyse_melody(source, track):
+    """Track a prominent upper voice on the sixteenth-note grid."""
+    notes = np.arange(60, 89)
+    hz = 440 * 2 ** ((notes - 69) / 12)
+    size = 16384
+    bins = np.rint(hz * size / track.rate).astype(int)
+    window = np.hanning(track.step)
+    scores = []
+    for start in range(track.first_bar, track.end, track.step):
+        mono = source[start:start + track.step].mean(axis=1)
+        spectrum = np.abs(np.fft.rfft(mono * window, n=size))
+        fundamental = np.maximum.reduce([spectrum[bins + offset] for offset in (-1, 0, 1)])
+        harmonic = spectrum[bins * 2] + .45 * spectrum[bins * 3]
+        sub = spectrum[bins // 2]
+        salience = (fundamental + .32 * harmonic) / np.sqrt(1 + sub / (fundamental + 1e-4))
+        scores.append(np.log(salience / max(salience.max(), 1e-6) + .012))
+
+    # Prefer a continuous melodic line over isolated loud partials.
+    distance = np.abs(notes[:, None] - notes[None, :])
+    transition = -.09 * distance - .18 * (distance > 0) - .36 * (distance > 7)
+    previous = scores[0]
+    parents = []
+    for frame in scores[1:]:
+        candidates = previous[:, None] + transition
+        parents.append(candidates.argmax(axis=0))
+        previous = frame + candidates.max(axis=0)
+    index = int(previous.argmax())
+    melody = [int(notes[index])]
+    for parent in reversed(parents):
+        index = parent[index]
+        melody.append(int(notes[index]))
+    return melody[::-1]
 
 
 def make_instruments(rate, styles):
