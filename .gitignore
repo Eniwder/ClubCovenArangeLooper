@@ -1,5 +1,8 @@
 __pycache__/
 misc/
-
+.cache/
 ClubCoven-preview.wav
 ClubCoven.mp3
+evaluation/*.wav
+evaluation/*.tmp
+evaluation/stems/

@@ -33,5 +33,85 @@
       "low_hz": 30,
       "high_hz": 165
     }
-  }
+  },
+  "sections": [
+    {
+      "start": 16.375,
+      "name": "intro motif",
+      "energy": 0.32,
+      "protected": false
+    },
+    {
+      "start": 24.375,
+      "name": "intro answer",
+      "energy": 0.4,
+      "protected": false
+    },
+    {
+      "start": 30.375,
+      "name": "recognizable turnaround",
+      "energy": 0.43,
+      "protected": true
+    },
+    {
+      "start": 32.375,
+      "name": "first theme",
+      "energy": 0.55,
+      "protected": false
+    },
+    {
+      "start": 40.375,
+      "name": "theme answer",
+      "energy": 0.47,
+      "protected": false
+    },
+    {
+      "start": 48.375,
+      "name": "contrasting phrase",
+      "energy": 0.57,
+      "protected": false
+    },
+    {
+      "start": 56.375,
+      "name": "contrasting answer",
+      "energy": 0.61,
+      "protected": false
+    },
+    {
+      "start": 64.375,
+      "name": "build",
+      "energy": 0.75,
+      "protected": false
+    },
+    {
+      "start": 72.375,
+      "name": "build answer",
+      "energy": 0.83,
+      "protected": false
+    },
+    {
+      "start": 80.375,
+      "name": "climax",
+      "energy": 0.89,
+      "protected": false
+    },
+    {
+      "start": 88.375,
+      "name": "climax answer",
+      "energy": 0.78,
+      "protected": false
+    },
+    {
+      "start": 96.375,
+      "name": "closing figure",
+      "energy": 0.56,
+      "protected": true
+    },
+    {
+      "start": 98.375,
+      "name": "loop pickup",
+      "energy": 0.48,
+      "protected": true
+    }
+  ]
 }

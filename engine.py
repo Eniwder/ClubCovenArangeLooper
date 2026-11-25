@@ -1,13 +1,23 @@
 """Render the original recording and generated accents in bounded blocks."""
 
+from collections import deque
+
 import numpy as np
 
 from arrangement import Arrangement
 
 
 class Engine:
-    def __init__(self, track, rules, seed):
+    def __init__(self, track, rules, seed, intensity=1.0, controls=None):
         self.track = track
+        self.seed = seed
+        self.intensity = intensity
+        self.controls = controls if controls is not None else {}
+        self.control_log = deque(maxlen=256)
+        self.controls_truncated = False
+        self.history = deque(maxlen=48)
+        self.elapsed = 0
+        self.snapshot = None
         self.arrangement = Arrangement(rules, seed)
         self.source_pos = 0
         self.until_step = track.first_bar
@@ -22,6 +32,11 @@ class Engine:
         self.lead_plan = {}
         self.mix_from = self.mix_to = (1.0, False)
         self.mix_length = self.mix_position = track.step * 8
+        self.trim_from = self.trim_to = 1.0
+        self.trim_position = self.mix_length
+        self.trims = {name: 10 ** (style.get("trim_db", 0) / 20)
+                      for name, style in self.styles.items()}
+        self.release = np.linspace(1, 0, track.frames(.035), dtype=np.float32)
 
     def mix_source(self, block, source_slice):
         gain, filtered = self.mix_to
@@ -47,7 +62,7 @@ class Engine:
     def play_note(self, instrument, pitch_class, gain):
         notes = self.track.instruments[instrument]
         midi = next(midi for midi in notes if midi % 12 == pitch_class)
-        self.voices.append((notes[midi], 0, gain))
+        self.voices.append((notes[midi], 0, gain, False))
 
     def schedule_step(self):
         track = self.track
@@ -57,8 +72,10 @@ class Engine:
         if tone:
             pitch, gain = tone
             self.play_note(style, track.pitches_at(self.source_pos)[pitch], gain)
-        for instrument, midi, gain in self.lead_plan.get(self.step, ()):
-            self.voices.append((track.instruments[instrument][midi], 0, gain))
+        for instrument, midi, gain, duration in self.lead_plan.get(self.step, ()):
+            note = track.instruments[instrument][midi]
+            length = duration * track.step + len(self.release)
+            self.voices.append((note[:length], 0, gain, len(note) > length))
         rhythm = config.get("rhythm")
         if rhythm:
             if self.step in self.arrangement.bass_steps:
@@ -67,7 +84,7 @@ class Engine:
             drum = rhythm["kit"].get(str(self.step))
             if drum:
                 hit, gain = drum
-                self.voices.append((track.hits[hit], 0, gain))
+                self.voices.append((track.hits[hit], 0, gain, False))
         event = self.plan.get(self.step)
         if event and config["drum_gain"]:
             name, gain = event
@@ -75,26 +92,53 @@ class Engine:
             self.hit = track.hits[name]
             self.hit_pos = 0
 
+    def next_bar(self):
+        track = self.track
+        bar = self.arrangement.bar
+        if bar in self.controls:
+            self.intensity = self.controls[bar]
+        intensity = self.intensity
+        if bar == 0 or intensity != self.arrangement.intensity:
+            self.controls_truncated |= len(self.control_log) == self.control_log.maxlen
+            self.control_log.append((bar, intensity))
+        previous = self.arrangement.style
+        section = track.sections.get(self.source_pos, {})
+        self.plan = self.arrangement.next_bar(section, intensity)
+        name = self.arrangement.style
+        style = self.styles[name]
+        self.replacement = style.get("melody")
+        if self.replacement:
+            contour = [track.melody_at(self.source_pos + step * track.step)
+                       for step in range(track.steps_per_bar)]
+            self.lead_plan = self.arrangement.lead_events(contour, self.replacement, previous != name)
+        else:
+            self.lead_plan = {}
+        target = (style["original_gain"], bool(self.replacement))
+        if target != self.mix_to:
+            self.mix_from = self.mix_to
+            self.mix_to = target
+            self.mix_position = 0
+        trim = self.trims[name]
+        if trim != self.trim_to:
+            self.trim_from, self.trim_to = self.trim_to, trim
+            self.trim_position = 0
+        parts = [label for label, enabled in (
+            ("原曲" if not self.replacement else "処理済み伴奏", target[0]),
+            ("旋律", self.lead_plan), ("伴奏", self.arrangement.tone_pattern),
+            ("ベース", self.arrangement.bass_steps),
+            ("打音", style.get("rhythm", {}).get("kit") or (self.plan and style["drum_gain"])),
+        ) if enabled]
+        self.snapshot = (bar, name, self.arrangement.energy, intensity, " / ".join(parts))
+        if previous != name or bar == 0:
+            self.history.append((self.elapsed, self.source_pos, name))
+
     def render(self, output):
         track = self.track
         offset = 0
         while offset < len(output):
             if self.until_step == 0:
                 if self.step == 0:
-                    self.plan = self.arrangement.next_bar()
-                    style = self.styles[self.arrangement.style]
-                    self.replacement = style.get("melody")
-                    if self.replacement:
-                        contour = [track.melody_at(self.source_pos + step * track.step)
-                                   for step in range(track.steps_per_bar)]
-                        self.lead_plan = self.arrangement.lead_events(contour, self.replacement)
-                    else:
-                        self.lead_plan = {}
-                    target = (style["original_gain"], bool(self.replacement))
-                    if target != self.mix_to:
-                        self.mix_from = self.mix_to
-                        self.mix_to = target
-                        self.mix_position = 0
+                    self.next_bar()
                 self.schedule_step()
                 self.step = (self.step + 1) % track.steps_per_bar
                 self.until_step = track.step
@@ -109,12 +153,26 @@ class Engine:
                 if self.hit_pos == len(self.hit):
                     self.hit = None
             active = []
-            for note, position, gain in self.voices:
+            for note, position, gain, release in self.voices:
                 length = min(count, len(note) - position)
-                block[:length] += note[position:position + length] * gain
+                samples = note[position:position + length] * gain
+                release_at = len(note) - len(self.release)
+                if release and position + length > release_at:
+                    start = max(0, release_at - position)
+                    fade = position + start - release_at
+                    samples[start:] *= self.release[fade:fade + length - start, None]
+                block[:length] += samples
                 if position + length < len(note):
-                    active.append((note, position + length, gain))
+                    active.append((note, position + length, gain, release))
             self.voices = active
+            if self.trim_position < self.mix_length:
+                progress = np.minimum(
+                    (self.trim_position + np.arange(count)) / self.mix_length, 1
+                )
+                block *= (self.trim_from + (self.trim_to - self.trim_from) * progress)[:, None]
+                self.trim_position += count
+            elif self.trim_to != 1:
+                block *= self.trim_to
             # Keep coincident lead, bass and drum attacks below full scale.
             loud = np.abs(block) > .88
             if loud.any():
@@ -126,3 +184,4 @@ class Engine:
                 self.source_pos = track.start
             self.until_step -= count
             offset += count
+            self.elapsed += count
