@@ -23,6 +23,8 @@ class Engine:
         self.procedural = None if legacy else Procedural(seed, rules["phrase_bars"])
         self.generated = None
         self.generated_backing = {}
+        self.texture_started = False
+        self.wait_for_source_fade = False
         bar_frames = track.step * track.steps_per_bar
         loop_frames = track.end - track.start
         loop_bars = loop_frames // bar_frames
@@ -76,9 +78,13 @@ class Engine:
         self.voices.append((note[:length], -self.track.frames(delay / 1000), gain, len(note) > length))
 
     def schedule_lead(self):
-        if self.include_lead:
+        if self.include_lead and not (self.wait_for_source_fade and self.mix_position < self.mix_length):
             for instrument, midi, gain, duration, delay in self.lead_plan.get(self.step, ()):
-                self.queue_note(self.track.instruments[instrument][midi], gain, duration, delay)
+                self.queue_note(self.track.instruments[instrument][midi],
+                                gain * self.texture_entry_gain(), duration, delay)
+
+    def texture_entry_gain(self):
+        return min(1., .45 + self.step * .07) if self.texture_started else 1.
 
     def schedule_step(self):
         track = self.track
@@ -91,7 +97,7 @@ class Engine:
                     notes = track.instruments[instrument]
                     midi = next(midi for midi in notes if midi % 12 == pitch)
                     note = notes[midi]
-                self.queue_note(note, gain, duration, delay)
+                self.queue_note(note, gain * self.texture_entry_gain(), duration, delay)
             return
         style = self.arrangement.style
         config = self.styles[style]
@@ -173,10 +179,14 @@ class Engine:
             self.lead_plan = {}
         mode = style["lead_mode"]
         target = style["original_gain"]
+        was_generated = self.generated is not None
         self.generated = None
-        if self.procedural is not None and (name != "original" or bar >= 4):
-            self.generated = self.procedural.next_bar(name, style, section, intensity,
+        self.texture_started = False
+        if self.procedural is not None:
+            change_texture = change_style or (bar == 0 and name != "original")
+            self.generated = self.procedural.next_bar(style, change_texture, intensity,
                                                       self.arrangement.energy, confidence)
+            self.texture_started = self.generated is not None and change_texture
         if self.generated is not None:
             texture, position, phrase = self.generated
             accompaniment = self.accompaniment_position(texture, position)
@@ -187,10 +197,11 @@ class Engine:
             mode = "original" if texture.source_gain else "replace" if texture.lead else "omit"
             target = texture.source_gain
         if target != self.mix_to:
+            self.wait_for_source_fade = self.generated is not None and target == 0
             self.mix_from = self.mix_to
             self.mix_to = target
             self.mix_position = 0
-            self.mix_length = track.step * (2 if target == 0 else 8)
+            self.mix_length = track.step * (8 if was_generated or self.generated is not None or target else 2)
         trim = 1.0 if self.generated is not None else self.trims[name]
         if trim != self.trim_to:
             self.trim_from, self.trim_to = self.trim_to, trim

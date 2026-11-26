@@ -53,7 +53,6 @@ class Procedural:
         self.texture = None
         self.age = 0
         self.phrase_bars = phrase_bars
-        self.direction = None
         self.previous_lead = None
         self.reprise_source = None
 
@@ -70,7 +69,7 @@ class Procedural:
     def candidate(self, style, intensity, energy, confidence):
         rng = self.random
         mode = style["lead_mode"]
-        keep = mode in ("original", "reinforce") and (intensity < .50 or rng.random() < .64)
+        keep = intensity < .50 or (mode in ("original", "reinforce") and rng.random() < .64)
         if keep:
             harmony = rng.choice(("soft_keys", "soft_harmony"))
             motif = self.rhythm(rng.choice((2, 3, 4)), (3, .5, 2, .8), gap=3)
@@ -112,18 +111,14 @@ class Procedural:
         self.age = 0
         self.reprise_source = None
 
-    def next_bar(self, style_name, style, section, intensity, energy, confidence):
-        if intensity < .30:
+    def next_bar(self, style, change_texture, intensity, energy, confidence):
+        if intensity < .30 or (intensity < .50 and self.texture and not self.texture.source_gain):
             self.texture = None
-            self.direction = None
             self.previous_lead = None
-            return None
-        direction = (style_name, intensity < .50)
-        if (self.direction != direction or
-                (not section.get("protected") and self.age >= 2 * self.phrase_bars
-                 and ((section and self.random.random() < .72) or self.age >= 4 * self.phrase_bars))):
+        if change_texture and intensity >= .30:
             self.select(style, intensity, energy, confidence)
-            self.direction = direction
+        if self.texture is None:
+            return None
         texture = self.texture
         position = self.age % self.phrase_bars
         phrase = self.age // self.phrase_bars
@@ -172,12 +167,12 @@ class Procedural:
 
     def lead(self, texture, position, phrase, contour, pitches, protected=False):
         performer = texture.lead
-        answer = texture.treatment == "answer" and position >= 2 and not protected
+        answer = texture.treatment == "answer" and position == self.phrase_bars - 1 and not protected
         if answer:
             performer = "melody_response" if performer != "melody_response" else "melody_keys"
         entering = performer != self.previous_lead
         self.previous_lead = performer
-        if not performer or (texture.treatment == "sparse" and position == 2 and not protected):
+        if not performer:
             return {}
         kicks, backbeat, _, swing = FEELS[texture.feel]
         events = {}

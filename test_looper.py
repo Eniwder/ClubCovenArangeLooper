@@ -40,10 +40,10 @@ class ClubCovenTests(unittest.TestCase):
 
     def test_seed_block_size_and_control_replay(self):
         inputs = {0: .45, 7: 1, 33: 0, 61: .75}
-        digest, engine = self.render(44, 4096, 145, controls=inputs)
+        digest, engine = self.render(44, 4096, 210, controls=inputs)
         self.assertEqual(dict(engine.control_log), inputs)
-        self.assertEqual(digest, self.render(44, 507, 145, controls=dict(engine.control_log))[0])
-        self.assertNotEqual(digest, self.render(43, 4096, 145, controls=inputs)[0])
+        self.assertEqual(digest, self.render(44, 507, 210, controls=dict(engine.control_log))[0])
+        self.assertNotEqual(digest, self.render(43, 4096, 210, controls=inputs)[0])
 
     def test_loop_waveform_continuity_and_zero_intensity(self):
         track = self.track
@@ -84,14 +84,21 @@ class ClubCovenTests(unittest.TestCase):
         track = self.track
         engine = Engine(track, self.rules, 44)
         bar_frames = track.step * track.steps_per_bar
+        texture_changes = []
+        previous_texture = None
         for bar in range(281):
             engine.elapsed = track.first_bar + bar * bar_frames
             engine.source_pos = engine.elapsed
             if engine.source_pos >= track.end:
                 engine.source_pos = track.start + (engine.source_pos - track.end) % (track.end - track.start)
             engine.next_bar()
+            texture = engine.generated[0] if engine.generated else None
+            if texture is not previous_texture:
+                texture_changes.append(engine.elapsed / track.rate)
+                previous_texture = texture
         self.assertEqual([elapsed / track.rate for elapsed, _, _ in engine.history],
                          [16.375, 168.375, 372.375, 576.375])
+        self.assertEqual(texture_changes, [168.375, 372.375, 576.375])
         self.assertTrue(all(position == track.frames(32.375)
                             for _, position, _ in list(engine.history)[1:]))
 
