@@ -1,6 +1,7 @@
 __pycache__/
 misc/
 .cache/
+/preferences.json
 ClubCoven-preview.wav
 ClubCoven.mp3
 evaluation/*.wav

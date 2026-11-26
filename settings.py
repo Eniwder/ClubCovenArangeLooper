@@ -1,6 +1,35 @@
 """Validate the editable Club Coven configuration before opening an audio stream."""
 
+import json
 import math
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+
+
+def load_preferences(path):
+    defaults = {"volume": .7, "intensity": 1.0}
+    try:
+        saved = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return defaults
+    if isinstance(saved, dict):
+        for key in defaults:
+            value = saved.get(key)
+            if type(value) in (int, float) and 0 <= value <= 1:
+                defaults[key] = value
+    return defaults
+
+
+def save_preferences(path, preferences):
+    output = NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False)
+    temporary = Path(output.name)
+    try:
+        with output:
+            json.dump(preferences, output, indent=2)
+            output.write("\n")
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def validate(config, rules):

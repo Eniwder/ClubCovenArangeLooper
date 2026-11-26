@@ -9,7 +9,10 @@ import numpy as np
 
 from engine import Engine
 from material import ROOT, Track, read_json
-from settings import validate
+from settings import load_preferences, save_preferences, validate
+
+
+PREFERENCES_PATH = ROOT / "preferences.json"
 
 
 def preview(path, seconds, engine):
@@ -28,9 +31,9 @@ def preview(path, seconds, engine):
             remaining -= len(chunk)
 
 
-def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
+def run_gui(track, rules, initial_seed, initial_intensity=None, controls=None):
     import tkinter as tk
-    from tkinter import filedialog, ttk
+    from tkinter import filedialog, messagebox, ttk
     import sounddevice as sd
 
     root = tk.Tk()
@@ -43,9 +46,11 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
     details = tk.StringVar()
     recent = tk.StringVar()
     intensity_label = tk.StringVar()
-    intensity = initial_intensity
+    saved_preferences = load_preferences(PREFERENCES_PATH)
+    preferences = saved_preferences.copy()
+    intensity = preferences["intensity"] if initial_intensity is None else initial_intensity
     engine = None
-    volume = 0.7
+    volume = preferences["volume"]
     stream = None
     stopping = False
     current_gain = 0.0
@@ -55,10 +60,12 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
     def update_volume(value):
         nonlocal volume
         volume = float(value) / 100
+        preferences["volume"] = volume
 
     def update_intensity(value):
         nonlocal intensity
         intensity = float(value) / 100
+        preferences["intensity"] = intensity
         intensity_label.set(f"編曲強度 {intensity:.0%}")
         if engine is not None:
             engine.intensity = intensity
@@ -147,7 +154,7 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
         if path:
             try:
                 if Path(path).suffix.lower() != ".json" or Path(path).resolve() in (
-                    ROOT / "track.json", ROOT / "rules.json",
+                    ROOT / "track.json", ROOT / "rules.json", PREFERENCES_PATH.resolve(),
                 ):
                     raise ValueError("操作記録は設定とは別の JSON ファイルに保存してください。")
                 Path(path).write_text(json.dumps({
@@ -167,8 +174,9 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
     stop_button = ttk.Button(body, text="停止", command=stop, state="disabled")
     stop_button.grid(row=0, column=1, sticky="ew")
     ttk.Label(body, text="音量").grid(row=1, column=0, sticky="w", pady=(12, 0))
-    slider = ttk.Scale(body, from_=0, to=100, command=update_volume)
-    slider.set(70)
+    slider = ttk.Scale(body, from_=0, to=100)
+    slider.set(volume * 100)
+    slider.configure(command=update_volume)
     slider.grid(row=1, column=1, sticky="ew", pady=(12, 0))
     ttk.Label(body, text="乱数シード").grid(row=2, column=0, sticky="w", pady=(8, 0))
     seed_controls = ttk.Frame(body)
@@ -184,9 +192,10 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
         row=3, column=0, columnspan=2, sticky="w", pady=(12, 0)
     )
     ttk.Label(body, textvariable=intensity_label).grid(row=4, column=0, sticky="w", pady=(8, 0))
-    strength = ttk.Scale(body, from_=0, to=100, command=update_intensity)
-    strength.set(initial_intensity * 100)
-    update_intensity(initial_intensity * 100)
+    strength = ttk.Scale(body, from_=0, to=100)
+    strength.set(intensity * 100)
+    strength.configure(command=update_intensity)
+    intensity_label.set(f"編曲強度 {intensity:.0%}")
     strength.grid(row=4, column=1, sticky="ew")
     ttk.Label(body, textvariable=details, wraplength=510).grid(row=5, columnspan=2, sticky="w")
     ttk.Label(body, textvariable=recent, wraplength=510).grid(row=6, columnspan=2, sticky="w")
@@ -196,6 +205,11 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
     def quit_app():
         try:
             close_stream()
+            if preferences != saved_preferences:
+                try:
+                    save_preferences(PREFERENCES_PATH, preferences)
+                except OSError as error:
+                    messagebox.showerror("設定の保存に失敗しました", str(error), parent=root)
         finally:
             root.destroy()
 
@@ -215,14 +229,14 @@ def run_gui(track, rules, initial_seed, initial_intensity=1.0, controls=None):
 
 def main():
     parser = argparse.ArgumentParser(description="Club Coven endless arrangement")
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int)
     parser.add_argument("--preview", metavar="WAV", help="render a WAV instead of opening the UI")
     parser.add_argument("--seconds", type=int, default=115)
-    parser.add_argument("--intensity", type=float, default=100, help="arrangement intensity, 0–100")
+    parser.add_argument("--intensity", type=float, help="arrangement intensity, 0–100")
     parser.add_argument("--controls", type=Path, help="replay a saved intensity operation log")
     parser.add_argument("--rebuild-cache", action="store_true")
     args = parser.parse_args()
-    if args.seconds <= 0 or not 0 <= args.intensity <= 100:
+    if args.seconds <= 0 or (args.intensity is not None and not 0 <= args.intensity <= 100):
         parser.error("--seconds must be positive and --intensity must be in 0–100")
     try:
         rules = read_json("rules.json")
@@ -242,10 +256,14 @@ def main():
             if type(args.seed) is not int or 0 not in controls:
                 raise ValueError("強度操作の記録にはシードと最初の小節が必要です。")
         track = Track(config, rules, ROOT / ".cache" / "track.npz", args.rebuild_cache)
+        intensity = None if args.intensity is None else args.intensity / 100
         if args.preview:
-            preview(args.preview, args.seconds, Engine(track, rules, args.seed, args.intensity / 100, controls))
+            seed = 42 if args.seed is None else args.seed
+            preview(args.preview, args.seconds, Engine(track, rules, seed,
+                                                      1.0 if intensity is None else intensity, controls))
         else:
-            run_gui(track, rules, args.seed, args.intensity / 100, controls)
+            seed = getrandbits(32) if args.seed is None else args.seed
+            run_gui(track, rules, seed, intensity, controls)
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
         if sys.stderr is None and not args.preview:
             from tkinter import messagebox
