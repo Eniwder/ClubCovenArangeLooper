@@ -79,6 +79,32 @@ class ClubCovenTests(unittest.TestCase):
                 else:
                     self.assertGreater(len(seen), 1)
 
+    def test_engine_changes_style_at_song_length_boundaries(self):
+        track = self.track
+        engine = Engine(track, self.rules, 44)
+        bar_frames = track.step * track.steps_per_bar
+        for bar in range(281):
+            engine.elapsed = track.first_bar + bar * bar_frames
+            engine.source_pos = engine.elapsed
+            if engine.source_pos >= track.end:
+                engine.source_pos = track.start + (engine.source_pos - track.end) % (track.end - track.start)
+            engine.next_bar()
+        self.assertEqual([elapsed / track.rate for elapsed, _, _ in engine.history],
+                         [16.375, 168.375, 372.375, 576.375])
+        self.assertTrue(all(position == track.frames(32.375)
+                            for _, position, _ in list(engine.history)[1:]))
+
+    def test_phrase_layer_choices_combine_independently(self):
+        arrangement = Arrangement(self.rules, 44)
+        arrangement.style = "melody_sync"
+        patterns = set()
+        for bar in range(256):
+            arrangement.next_bar(change_style=False)
+            if bar % self.rules["phrase_bars"] == 1:
+                patterns.add((tuple(arrangement.bass_steps), tuple(arrangement.harmony_steps),
+                              tuple(arrangement.kit_pattern)))
+        self.assertEqual(len(patterns), 8)
+
     def test_note_rest_repeated_attack_and_cross_bar_hold(self):
         notes = self.track.notes
         self.assertTrue(np.any(notes[:, 0] == -1))

@@ -41,6 +41,7 @@ def validate(config, rules):
     number(config["crossfade_ms"], 1, 500, "crossfade_ms")
     for key in ("loop_start", "loop_end", "first_arranged_bar"):
         number(config[key], 1, 360, key)
+    number(config.get("arrangement_seconds", config["loop_end"]), 1, 3600, "arrangement_seconds")
     if config["beats_per_bar"] != 4 or not config["first_arranged_bar"] < config["loop_start"] < config["loop_end"]:
         raise ValueError("拍子またはループ位置が不正です。")
     step = round(config["sample_rate"] * 15 / config["bpm"])

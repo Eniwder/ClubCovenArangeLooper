@@ -16,6 +16,10 @@ class Arrangement:
         self.style_random = random.Random(seed ^ 0x2764)
         self.tone_pattern = {}
         self.bass_steps = ()
+        self.harmony_steps = ()
+        self.kit_pattern = {}
+        self.layer_random = random.Random(seed ^ 0x796B)
+        self.layer_variation = 0
         self.intensity = 1.0
         self.energy = .35
         self.energy_goal = .35
@@ -50,7 +54,7 @@ class Arrangement:
         else:
             self.arc_wait += 1
 
-    def choose_style(self, section, confidence=.6):
+    def choose_style(self, section, confidence=.6, change_style=None):
         styles = self.rules["styles"]
         current = styles[self.style]
         desired = current["phrases"] * self.rules["phrase_bars"]
@@ -60,7 +64,9 @@ class Arrangement:
             new_style = "original"
         elif current["min_intensity"] > self.intensity:
             new_style = "original"
-        elif (section.get("protected") or self.style_bars < desired
+        elif change_style is False:
+            return
+        elif change_style is None and (section.get("protected") or self.style_bars < desired
               or (not section and self.style_bars < desired + 3)):
             return
         else:
@@ -82,6 +88,8 @@ class Arrangement:
                     if list(self.recent_roles)[-2:] == ["recording"] * 2:
                         weight *= 1.7
                 choices[name] = weight
+            if change_style and len(choices) > 1:
+                choices.pop(self.style, None)
             new_style = self.style_random.choices(list(choices), list(choices.values()))[0] if choices else "original"
         self.style = new_style
         self.style_bars = 0
@@ -133,12 +141,11 @@ class Arrangement:
                 events[dst + 3] = [("lead_echo", int(midi), gain * .64, int(duration) - 3, 0)]
         return events
 
-    def next_bar(self, section=None, intensity=1.0, confidence=.6):
+    def next_bar(self, section=None, intensity=1.0, confidence=.6, change_style=None):
         self.intensity = intensity
         self.update_energy(section or {})
-        self.choose_style(section or {}, confidence)
-        maximum = self.rules["styles"][self.style]["phrases"] * self.rules["phrase_bars"] + 3
-        self.style_bars = min(self.style_bars + 1, maximum)
+        self.choose_style(section or {}, confidence, change_style)
+        self.style_bars += 1
         phrase_bars = self.rules["phrase_bars"]
         position = self.bar % phrase_bars
         states = self.rules["states"]
@@ -158,9 +165,20 @@ class Arrangement:
         pattern = style["pattern"]
         rhythm = style.get("rhythm", {})
         variants = rhythm.get("bass_variants")
+        if position == 0 or self.style_bars == 1:
+            self.layer_variation = self.layer_random.getrandbits(3)
         self.bass_steps = (
             variants[position % len(variants)] if variants else rhythm.get("bass_steps", ())
         )
+        self.harmony_steps = rhythm.get("harmony", {}).get("steps", ())
+        self.kit_pattern = rhythm.get("kit", {})
+        if position % 2 and self.layer_variation & 1:
+            self.bass_steps = self.bass_steps[::2]
+        if position % 2 and self.layer_variation & 2:
+            self.harmony_steps = self.harmony_steps[::2]
+        if position % 2 and self.layer_variation & 4:
+            self.kit_pattern = {step: hit for step, hit in self.kit_pattern.items()
+                                if hit[0] not in ("closed", "open")}
         self.tone_pattern = {
             step: (tone, gain * self.style_random.uniform(.88, 1.0))
             for step, tone, gain in pattern

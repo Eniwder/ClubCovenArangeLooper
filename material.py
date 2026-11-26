@@ -54,6 +54,7 @@ class Track:
         self.rate = config["sample_rate"]
         self.start = self.frames(config["loop_start"])
         self.end = self.frames(config["loop_end"])
+        self.arrangement_length = self.frames(config.get("arrangement_seconds", config["loop_end"]))
         self.first_bar = self.frames(config["first_arranged_bar"])
         self.step = self.frames(60 / config["bpm"] / 4)
         self.steps_per_bar = config["beats_per_bar"] * 4

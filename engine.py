@@ -19,6 +19,14 @@ class Engine:
         self.elapsed = 0
         self.snapshot = None
         self.arrangement = Arrangement(rules, seed)
+        bar_frames = track.step * track.steps_per_bar
+        loop_frames = track.end - track.start
+        loop_bars = loop_frames // bar_frames
+        first_loop_bar = (track.end - track.first_bar + bar_frames - 1) // bar_frames
+        first_loop_time = track.first_bar + first_loop_bar * bar_frames
+        extra_loops = max(0, round((track.arrangement_length - first_loop_time) / loop_frames))
+        self.next_style_bar = first_loop_bar + extra_loops * loop_bars
+        self.style_period = max(1, round(track.arrangement_length / loop_frames)) * loop_bars
         self.source_pos = 0
         self.until_step = track.first_bar
         self.step = 0
@@ -81,13 +89,13 @@ class Engine:
                 bass = rhythm.get("bass_instrument", "replacement_bass")
                 self.play_note(bass, pitches[0], .9)
             harmony = rhythm.get("harmony")
-            if harmony and self.step in harmony["steps"]:
+            if harmony and self.step in self.arrangement.harmony_steps:
                 gain = harmony["gain"]
                 harmonic = pitches[5] if pitches[6] >= 35 else pitches[0]
                 self.play_note(harmony["instrument"], harmonic, gain)
                 if pitches[6] >= 56 and pitches[4] != harmonic:
                     self.play_note(harmony["instrument"], pitches[4], gain * .63)
-            drum = rhythm["kit"].get(str(self.step))
+            drum = self.arrangement.kit_pattern.get(str(self.step))
             if drum:
                 hit, gain = drum
                 self.voices.append((hits[hit], 0, gain, False))
@@ -112,7 +120,10 @@ class Engine:
         contour = [track.melody_at(self.source_pos + step * track.step)
                    for step in range(track.steps_per_bar)]
         confidence = track.phrase_confidence_at(self.source_pos)
-        self.plan = self.arrangement.next_bar(section, intensity, confidence)
+        change_style = bar >= self.next_style_bar and not section.get("protected")
+        if change_style:
+            self.next_style_bar += self.style_period
+        self.plan = self.arrangement.next_bar(section, intensity, confidence, change_style)
         name = self.arrangement.style
         style = self.styles[name]
         melody = style.get("melody")
@@ -134,9 +145,9 @@ class Engine:
         parts = [label for label, enabled in (
             ("原曲", target),
             ("旋律", self.lead_plan),
-            ("伴奏", self.arrangement.tone_pattern or style.get("rhythm", {}).get("harmony")),
+            ("伴奏", self.arrangement.tone_pattern or self.arrangement.harmony_steps),
             ("ベース", self.arrangement.bass_steps),
-            ("打音", style.get("rhythm", {}).get("kit") or (self.plan and style["drum_gain"])),
+            ("打音", self.arrangement.kit_pattern or (self.plan and style["drum_gain"])),
         ) if enabled]
         labels = {"original": "原曲演奏", "reinforce": "旋律補強", "replace": "旋律置換",
                   "omit": "旋律省略", "trade": "旋律交代"}
