@@ -8,6 +8,7 @@
   "loop_start": 30.75,
   "loop_end": 98.75,
   "arrangement_seconds": 178.2,
+  "reprises": [{"at": 32.375, "from": 16.375}],
   "crossfade_ms": 65,
   "hits": {
     "closed": {

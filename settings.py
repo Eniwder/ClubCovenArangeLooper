@@ -63,6 +63,7 @@ def validate(config, rules):
             number(value, 0, 2, name)
         for key in ("unison", "echo", "vibrato"):
             number(spec.get(key, 0), 0, .5, name)
+        number(spec.get("fm_index", 0), 0, 2, name)
 
     number(config["target_lufs"], -35, -8, "target_lufs")
     number(config["sample_rate"], 32000, 96000, "sample_rate", True)
@@ -83,6 +84,10 @@ def validate(config, rules):
                 - round(config["first_arranged_bar"] * config["sample_rate"])) % (step * 16):
             raise ValueError("section.start は小節の先頭に合わせてください。")
         number(item.get("energy", .5), 0, 1, "section.energy")
+    sections = {item["start"] for item in config["sections"] if not item.get("protected")}
+    for item in config.get("reprises", ()):
+        if item["at"] not in sections or item["from"] not in sections or item["from"] >= item["at"]:
+            raise ValueError("reprises は保護されていない先行セクションを指定してください。")
     for name, spec in config["hits"].items():
         number(spec["time"], .025, 360, name)
         number(spec["length_ms"], 5, 15000 / config["bpm"], name)

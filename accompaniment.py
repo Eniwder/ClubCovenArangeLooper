@@ -98,6 +98,8 @@ def make_instruments(rate, styles):
             phase = 2 * np.pi * (440 * 2 ** ((midi - 69) / 12)) * t
             if spec.get("vibrato"):
                 phase += spec["vibrato"] * np.sin(2 * np.pi * 5.1 * t) * np.clip((t - .08) / .24, 0, 1)
+            if spec.get("fm_index"):
+                phase += spec["fm_index"] * np.sin(2 * phase) * np.exp(-7 * t)
             signal = sum(
                 amplitude * np.sin(phase * (harmonic + spec['stretch'] * harmonic ** 2))
                 * np.exp(-t * (spec['decay'] + harmonic * spec['brightness_decay']))

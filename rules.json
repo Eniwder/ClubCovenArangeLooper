@@ -1222,6 +1222,18 @@
     }
   },
   "instruments": {
+    "muted_reed": {
+      "register": 47,
+      "length": 0.47,
+      "attack": 0.018,
+      "decay": 3.6,
+      "brightness_decay": 1.4,
+      "stretch": 0,
+      "level": 0.17,
+      "pan": [1, 0.72],
+      "partials": [1, 0.08, 0.22],
+      "fm_index": 0.78
+    },
     "replacement_bass": {
       "register": 35,
       "length": 0.54,

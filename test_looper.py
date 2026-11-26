@@ -13,6 +13,7 @@ from arrangement import Arrangement
 from engine import Engine
 from material import ROOT, Track, read_json
 from play import preview
+from procedural import Procedural
 from settings import validate
 
 
@@ -105,6 +106,44 @@ class ClubCovenTests(unittest.TestCase):
                               tuple(arrangement.kit_pattern)))
         self.assertEqual(len(patterns), 8)
 
+    def test_procedural_motifs_repeat_and_rhythms_replace_the_recording(self):
+        generator = Procedural(44, 4)
+        style = self.rules["styles"]["melody_keys"]
+        pitches = [[0, 4, 7, 0, 4, 7, 80]] * 4
+        feels = set()
+        for _ in range(100):
+            texture = generator.candidate(style, 1, .55, .7)
+            feels.add(texture.feel)
+            self.assertEqual(texture.source_gain, 0)
+            first = generator.backing(texture, 0, 0, pitches, 1)
+            self.assertEqual(first, generator.backing(texture, 1, 0, pitches, 1))
+            if texture.feel == "ambient":
+                self.assertTrue(all(instrument not in self.track.kit
+                                    for events in first.values() for instrument, *_ in events))
+        self.assertEqual(len(feels), 8)
+        for _ in range(50):
+            generator.select(style, 1, .55, .7)
+        self.assertEqual(len(generator.history), 32)
+
+    def test_procedural_reprise_requires_muted_source_and_matching_harmony(self):
+        track = self.track
+        engine = Engine(track, self.rules, 44)
+        engine.source_pos = track.frames(32.375)
+        style = self.rules["styles"]["melody_keys"]
+        generator = engine.procedural
+        for _ in range(100):
+            texture = generator.candidate(style, 1, .4, .6)
+            if texture.treatment == "interlude":
+                break
+        else:
+            self.fail("no interlude generated")
+        self.assertEqual(engine.accompaniment_position(texture, 0), engine.source_pos)
+        engine.mix_to = 0
+        self.assertEqual(engine.accompaniment_position(texture, 0), track.frames(16.375))
+        self.assertEqual(engine.accompaniment_position(texture, 1), track.frames(18.375))
+        with patch.object(track, "pitches_at", side_effect=lambda position: (position, 0, 0, 0, 0, 0, 0)):
+            self.assertEqual(engine.accompaniment_position(texture, 0), engine.source_pos)
+
     def test_note_rest_repeated_attack_and_cross_bar_hold(self):
         notes = self.track.notes
         self.assertTrue(np.any(notes[:, 0] == -1))
@@ -159,8 +198,8 @@ class ClubCovenTests(unittest.TestCase):
     def test_reconstruction_has_no_source_audio_and_can_isolate_backing(self):
         t = self.track
 
-        def play(lead):
-            engine = Engine(t, self.rules, 44, include_lead=lead)
+        def play(lead, legacy):
+            engine = Engine(t, self.rules, 43, include_lead=lead, legacy=legacy)
             engine.arrangement.style = "melody_keys"
             engine.source_pos = t.frames(48.375)
             engine.until_step = 0
@@ -171,15 +210,17 @@ class ClubCovenTests(unittest.TestCase):
             self.assertEqual(engine.mix_to, 0)
             return out
 
-        with_lead = play(True)
-        backing = play(False)
-        self.assertGreater(float(np.max(np.abs(with_lead - backing))), .05)
-        self.assertGreater(float(np.max(np.abs(backing))), .05)
-        with (patch.object(t, "audio", np.zeros_like(t.audio)),
-              patch.object(t, "backing", np.zeros_like(t.backing)),
-              patch.object(t, "hits", {})):
-            np.testing.assert_array_equal(with_lead, play(True))
-            np.testing.assert_array_equal(backing, play(False))
+        for legacy in (False, True):
+            with self.subTest(legacy=legacy):
+                with_lead = play(True, legacy)
+                backing = play(False, legacy)
+                self.assertGreater(float(np.max(np.abs(with_lead - backing))), .05)
+                self.assertGreater(float(np.max(np.abs(backing))), .05)
+                with (patch.object(t, "audio", np.zeros_like(t.audio)),
+                      patch.object(t, "backing", np.zeros_like(t.backing)),
+                      patch.object(t, "hits", {})):
+                    np.testing.assert_array_equal(with_lead, play(True, legacy))
+                    np.testing.assert_array_equal(backing, play(False, legacy))
 
     def test_trade_changes_performer_at_two_bar_boundaries(self):
         a = Arrangement(self.rules, 44)

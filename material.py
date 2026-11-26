@@ -59,6 +59,8 @@ class Track:
         self.step = self.frames(60 / config["bpm"] / 4)
         self.steps_per_bar = config["beats_per_bar"] * 4
         self.sections = {self.frames(section["start"]): section for section in config["sections"]}
+        self.reprises = {self.frames(item["at"]): self.frames(item["from"])
+                         for item in config.get("reprises", ())}
         self.kit = make_kit(self.rate)
         source_path = ROOT / config["source"]
         self.cache_hit = False

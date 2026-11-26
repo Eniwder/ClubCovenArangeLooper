@@ -31,7 +31,7 @@ def preview(path, seconds, engine):
             remaining -= len(chunk)
 
 
-def run_gui(track, rules, initial_seed, initial_intensity=None, controls=None):
+def run_gui(track, rules, initial_seed, initial_intensity=None, controls=None, legacy=False):
     import tkinter as tk
     from tkinter import filedialog, messagebox, ttk
     import sounddevice as sd
@@ -81,7 +81,7 @@ def run_gui(track, rules, initial_seed, initial_intensity=None, controls=None):
         if stream is not None:
             return
         try:
-            engine = Engine(track, rules, int(seed.get()), intensity, controls)
+            engine = Engine(track, rules, int(seed.get()), intensity, controls, legacy=legacy)
         except ValueError:
             status.set("シードは整数で入力してください。")
             return
@@ -159,6 +159,7 @@ def run_gui(track, rules, initial_seed, initial_intensity=None, controls=None):
                     raise ValueError("操作記録は設定とは別の JSON ファイルに保存してください。")
                 Path(path).write_text(json.dumps({
                     "seed": engine.seed,
+                    "generator": "legacy" if legacy else "procedural",
                     "changes": list(engine.control_log.copy()),
                     "transitions": [
                         {"elapsed_seconds": frame / track.rate,
@@ -234,6 +235,7 @@ def main():
     parser.add_argument("--seconds", type=int, default=115)
     parser.add_argument("--intensity", type=float, help="arrangement intensity, 0–100")
     parser.add_argument("--controls", type=Path, help="replay a saved intensity operation log")
+    parser.add_argument("--legacy", action="store_true", help="use the previous arrangement generator")
     parser.add_argument("--rebuild-cache", action="store_true")
     args = parser.parse_args()
     if args.seconds <= 0 or (args.intensity is not None and not 0 <= args.intensity <= 100):
@@ -248,6 +250,7 @@ def main():
         controls = {}
         if args.controls:
             log = json.loads(args.controls.read_text(encoding="utf-8-sig"))
+            args.legacy |= log.get("generator", "legacy") == "legacy"
             args.seed = log["seed"]
             for bar, intensity in log["changes"]:
                 if type(bar) is not int or bar < 0 or not 0 <= intensity <= 1:
@@ -260,10 +263,11 @@ def main():
         if args.preview:
             seed = 42 if args.seed is None else args.seed
             preview(args.preview, args.seconds, Engine(track, rules, seed,
-                                                      1.0 if intensity is None else intensity, controls))
+                                                      1.0 if intensity is None else intensity, controls,
+                                                      legacy=args.legacy))
         else:
             seed = getrandbits(32) if args.seed is None else args.seed
-            run_gui(track, rules, seed, intensity, controls)
+            run_gui(track, rules, seed, intensity, controls, legacy=args.legacy)
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as error:
         if sys.stderr is None and not args.preview:
             from tkinter import messagebox

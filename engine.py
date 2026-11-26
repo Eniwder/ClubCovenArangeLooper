@@ -5,10 +5,11 @@ from collections import deque
 import numpy as np
 
 from arrangement import Arrangement
+from procedural import Procedural
 
 
 class Engine:
-    def __init__(self, track, rules, seed, intensity=1.0, controls=None, include_lead=True):
+    def __init__(self, track, rules, seed, intensity=1.0, controls=None, include_lead=True, legacy=False):
         self.track = track
         self.seed = seed
         self.intensity = intensity
@@ -19,6 +20,9 @@ class Engine:
         self.elapsed = 0
         self.snapshot = None
         self.arrangement = Arrangement(rules, seed)
+        self.procedural = None if legacy else Procedural(seed, rules["phrase_bars"])
+        self.generated = None
+        self.generated_backing = {}
         bar_frames = track.step * track.steps_per_bar
         loop_frames = track.end - track.start
         loop_bars = loop_frames // bar_frames
@@ -67,19 +71,35 @@ class Engine:
         midi = next(midi for midi in notes if midi % 12 == pitch_class)
         self.voices.append((notes[midi], 0, gain, False))
 
+    def queue_note(self, note, gain, duration, delay):
+        length = duration * self.track.step + len(self.release) if duration else len(note)
+        self.voices.append((note[:length], -self.track.frames(delay / 1000), gain, len(note) > length))
+
+    def schedule_lead(self):
+        if self.include_lead:
+            for instrument, midi, gain, duration, delay in self.lead_plan.get(self.step, ()):
+                self.queue_note(self.track.instruments[instrument][midi], gain, duration, delay)
+
     def schedule_step(self):
         track = self.track
+        if self.generated is not None:
+            self.schedule_lead()
+            for instrument, pitch, gain, duration, delay in self.generated_backing.get(self.step, ()):
+                if instrument in track.kit:
+                    note = track.kit[instrument]
+                else:
+                    notes = track.instruments[instrument]
+                    midi = next(midi for midi in notes if midi % 12 == pitch)
+                    note = notes[midi]
+                self.queue_note(note, gain, duration, delay)
+            return
         style = self.arrangement.style
         config = self.styles[style]
         tone = self.arrangement.tone_pattern.get(self.step)
         if tone:
             pitch, gain = tone
             self.play_note(style, track.pitches_at(self.source_pos)[pitch], gain)
-        if self.include_lead:
-            for instrument, midi, gain, duration, delay in self.lead_plan.get(self.step, ()):
-                note = track.instruments[instrument][midi]
-                length = duration * track.step + len(self.release)
-                self.voices.append((note[:length], -track.frames(delay / 1000), gain, len(note) > length))
+        self.schedule_lead()
         rhythm = config.get("rhythm")
         reconstructed = config["lead_mode"] in ("replace", "trade", "omit")
         hits = track.kit if reconstructed else track.hits
@@ -105,6 +125,26 @@ class Engine:
             self.hit_gain = gain * config["drum_gain"]
             self.hit = hits[name]
             self.hit_pos = 0
+
+    def accompaniment_position(self, texture, position):
+        track = self.track
+        if texture.treatment != "interlude":
+            return self.source_pos
+        bar_frames = track.steps_per_bar * track.step
+        if position == 0:
+            self.procedural.reprise_source = None
+            alternate = track.reprises.get(self.source_pos)
+            last_beat = bar_frames * self.procedural.phrase_bars - 4 * track.step
+            if alternate is not None and self.mix_to == 0 and self.source_pos + last_beat < track.end:
+                for offset in (0, last_beat):
+                    expected = track.pitches_at(self.source_pos + offset)
+                    actual = track.pitches_at(alternate + offset)
+                    if expected[0] != actual[0] or tuple(expected[3:6]) != tuple(actual[3:6]):
+                        break
+                else:
+                    self.procedural.reprise_source = alternate
+        alternate = self.procedural.reprise_source
+        return self.source_pos if alternate is None else alternate + position * bar_frames
 
     def next_bar(self):
         track = self.track
@@ -133,12 +173,25 @@ class Engine:
             self.lead_plan = {}
         mode = style["lead_mode"]
         target = style["original_gain"]
+        self.generated = None
+        if self.procedural is not None and (name != "original" or bar >= 4):
+            self.generated = self.procedural.next_bar(name, style, section, intensity,
+                                                      self.arrangement.energy, confidence)
+        if self.generated is not None:
+            texture, position, phrase = self.generated
+            accompaniment = self.accompaniment_position(texture, position)
+            pitches = [track.pitches_at(accompaniment + beat * 4 * track.step) for beat in range(4)]
+            self.generated_backing = self.procedural.backing(texture, position, phrase, pitches, intensity)
+            self.lead_plan = self.procedural.lead(texture, position, phrase, contour, pitches,
+                                                  section.get("protected"))
+            mode = "original" if texture.source_gain else "replace" if texture.lead else "omit"
+            target = texture.source_gain
         if target != self.mix_to:
             self.mix_from = self.mix_to
             self.mix_to = target
             self.mix_position = 0
             self.mix_length = track.step * (2 if target == 0 else 8)
-        trim = self.trims[name]
+        trim = 1.0 if self.generated is not None else self.trims[name]
         if trim != self.trim_to:
             self.trim_from, self.trim_to = self.trim_to, trim
             self.trim_position = 0
@@ -151,6 +204,11 @@ class Engine:
         ) if enabled]
         labels = {"original": "原曲演奏", "reinforce": "旋律補強", "replace": "旋律置換",
                   "omit": "旋律省略", "trade": "旋律交代"}
+        if self.generated is not None:
+            parts = [texture.feel, self.procedural.previous_lead or "—", texture.treatment,
+                     texture.harmony]
+            if accompaniment != self.source_pos:
+                parts.append("回帰")
         self.snapshot = (bar, name, self.arrangement.energy, intensity,
                          f'{labels[mode]} · {self.arrangement.arc} · {" / ".join(parts)}')
         if previous != name or bar == 0:
