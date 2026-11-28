@@ -132,7 +132,19 @@ class Procedural:
         ending = position == self.phrase_bars - 1
         if ending and bass and bass[-1] <= 11 and drive >= .4:
             bass += (14,)
-        if position >= 2 and chords and chords[-1] < 14 and phrase % 2:
+        if texture.feel == "offbeat" and position >= 2:
+            # Answer the repeated opening with a gap, then a pickup into the next phrase.
+            if len(percussion) > 2:
+                percussion = tuple(step for step in percussion if step != percussion[-2])
+            if len(chords) > 1:
+                last = chords[-1]
+                shift = -1 if phrase % 2 == 0 else 1
+                moved = last + shift
+                if chords[-2] + 2 <= moved < 16 and moved not in bass:
+                    chords = (*chords[:-1], moved)
+            if ending and 15 not in percussion:
+                percussion = (*percussion, 15)
+        elif position >= 2 and chords and chords[-1] < 14 and phrase % 2:
             chords = (*chords[:-1], chords[-1] + 1)
 
         def add(step, instrument, pitch, gain, length):
@@ -160,7 +172,10 @@ class Procedural:
             add(step, "fill", 0, .88 * intensity, 0)
         for step in percussion:
             hit = "open" if step % 4 == 2 and drive > .6 else "closed"
-            add(step, hit, 0, (.68 if step % 2 == 0 else .43) * intensity, 0)
+            gain = .68 if step % 2 == 0 else .43
+            if texture.feel == "offbeat" and step % 4 == 2 and step // 4 % 2 != phrase % 2:
+                hit, gain = "closed", .46
+            add(step, hit, 0, gain * intensity, 0)
         if ending and percussion and drive > .5 and 15 not in percussion:
             add(15, "fill", 0, .53 * intensity, 0)
         return events
